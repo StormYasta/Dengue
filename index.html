@@ -993,6 +993,73 @@
         </article>
       </section>
 
+      <section class="content-section" id="distribuicao">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Análise espacial</span>
+            <h2>Incidência por estabelecimento de saúde</h2>
+            <p>
+              Consulte a localização das unidades notificadoras e filtre a
+              visualização entre estabelecimentos do SUS e da rede privada.
+            </p>
+          </div>
+          <span class="section-number" aria-hidden="true">01</span>
+        </div>
+
+        <div class="panel map-panel">
+          <div class="map-toolbar">
+            <div>
+              <span class="toolbar-title">Mapa interativo por estabelecimento</span>
+              <p class="stat-card-description">
+                Assim como na referência, o tamanho de cada círculo é proporcional
+                ao número de notificações vinculadas à unidade.
+              </p>
+            </div>
+            <div class="map-legend" aria-label="Legenda do tamanho dos círculos">
+              <span class="legend-item">
+                <span class="legend-scale" aria-hidden="true">
+                  <span class="legend-bubble small"></span>
+                  <span class="legend-bubble medium"></span>
+                  <span class="legend-bubble large"></span>
+                </span>
+                Tamanho = número de notificações
+              </span>
+            </div>
+          </div>
+
+          <div class="map-summary" aria-label="Resumo do mapa">
+            <div class="map-summary-item">
+              <span class="map-summary-label">Período exibido</span>
+              <span class="map-summary-value" id="mapPeriodo">—</span>
+            </div>
+            <div class="map-summary-item">
+              <span class="map-summary-label">Notificações localizadas</span>
+              <span class="map-summary-value" id="mapCasos">—</span>
+            </div>
+            <div class="map-summary-item">
+              <span class="map-summary-label">Estabelecimentos</span>
+              <span class="map-summary-value" id="mapEstabelecimentos">—</span>
+            </div>
+          </div>
+
+          <div id="map">
+            <div class="map-loading">Carregando mapa e unidades de saúde…</div>
+          </div>
+
+          <div class="insight-box">
+            <div class="insight-icon">i</div>
+            <div>
+              <strong>Como interpretar o mapa</strong>
+              <p>
+                Círculos maiores indicam mais notificações. Passe o mouse sobre um
+                ponto para identificar a unidade e clique para consultar o total e
+                a distribuição mensal. Os filtros de ano e rede também atualizam o mapa.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="content-section" id="sazonalidade">
         <div class="section-heading">
           <div>
@@ -1003,7 +1070,7 @@
               identifique períodos de aceleração, pico e redução dos casos.
             </p>
           </div>
-          <span class="section-number" aria-hidden="true">01</span>
+          <span class="section-number" aria-hidden="true">02</span>
         </div>
 
         <div class="panel chart-panel">
@@ -1031,7 +1098,7 @@
               avalie a participação das redes pública e privada nos dados filtrados.
             </p>
           </div>
-          <span class="section-number" aria-hidden="true">02</span>
+          <span class="section-number" aria-hidden="true">03</span>
         </div>
 
         <div class="stats-grid">
@@ -1086,73 +1153,6 @@
               do subconjunto selecionado.
             </p>
           </article>
-        </div>
-      </section>
-
-      <section class="content-section" id="distribuicao">
-        <div class="section-heading">
-          <div>
-            <span class="section-kicker">Análise espacial</span>
-            <h2>Incidência por estabelecimento de saúde</h2>
-            <p>
-              Consulte a localização das unidades notificadoras e filtre a
-              visualização entre estabelecimentos do SUS e da rede privada.
-            </p>
-          </div>
-          <span class="section-number" aria-hidden="true">03</span>
-        </div>
-
-        <div class="panel map-panel">
-          <div class="map-toolbar">
-            <div>
-              <span class="toolbar-title">Mapa interativo por estabelecimento</span>
-              <p class="stat-card-description">
-                Assim como na referência, o tamanho de cada círculo é proporcional
-                ao número de notificações vinculadas à unidade.
-              </p>
-            </div>
-            <div class="map-legend" aria-label="Legenda do tamanho dos círculos">
-              <span class="legend-item">
-                <span class="legend-scale" aria-hidden="true">
-                  <span class="legend-bubble small"></span>
-                  <span class="legend-bubble medium"></span>
-                  <span class="legend-bubble large"></span>
-                </span>
-                Tamanho = número de notificações
-              </span>
-            </div>
-          </div>
-
-          <div class="map-summary" aria-label="Resumo do mapa">
-            <div class="map-summary-item">
-              <span class="map-summary-label">Período exibido</span>
-              <span class="map-summary-value" id="mapPeriodo">—</span>
-            </div>
-            <div class="map-summary-item">
-              <span class="map-summary-label">Notificações localizadas</span>
-              <span class="map-summary-value" id="mapCasos">—</span>
-            </div>
-            <div class="map-summary-item">
-              <span class="map-summary-label">Estabelecimentos</span>
-              <span class="map-summary-value" id="mapEstabelecimentos">—</span>
-            </div>
-          </div>
-
-          <div id="map">
-            <div class="map-loading">Carregando mapa e unidades de saúde…</div>
-          </div>
-
-          <div class="insight-box">
-            <div class="insight-icon">i</div>
-            <div>
-              <strong>Como interpretar o mapa</strong>
-              <p>
-                Círculos maiores indicam mais notificações. Passe o mouse sobre um
-                ponto para identificar a unidade e clique para consultar o total e
-                a distribuição mensal. Os filtros de ano e rede também atualizam o mapa.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </main>
@@ -1663,9 +1663,12 @@
       }
 
       function popularFiltrosAno() {
-        const anos = [...new Set(dadosCSV.map((item) => item.ano))].sort();
+        const anos = [...new Set(dadosCSV.map((item) => item.ano))]
+          .sort((a, b) => Number(a) - Number(b));
+
         const select = document.getElementById("filtroAno");
         const container = document.getElementById("checkboxAnos");
+        const anoMaisRecente = anos.at(-1);
 
         select.innerHTML =
           '<option value="all">Todos os anos disponíveis</option>';
@@ -1683,7 +1686,10 @@
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.value = ano;
-          checkbox.checked = true;
+
+          // No primeiro carregamento, somente o ano mais recente fica ativo.
+          checkbox.checked = ano === anoMaisRecente;
+
           checkbox.addEventListener("change", () => {
             sincronizarSelectAno();
             atualizarPainel();
@@ -1695,6 +1701,9 @@
           label.append(checkbox, texto);
           container.appendChild(label);
         });
+
+        // Mantém o seletor superior sincronizado com o ano inicial.
+        select.value = anoMaisRecente || "all";
       }
 
       function atualizarIndicadores(dadosFiltrados) {
