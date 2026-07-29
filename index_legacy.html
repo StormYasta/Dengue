@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Monitor da Dengue - São José do Rio Preto</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <!-- MarkerCluster -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      /* ===== RESET BÁSICO ===== */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", Arial, sans-serif;
+        background: #f2f4f7;
+        color: #1f2937;
+      }
+
+      /* ===== HEADER ===== */
+      header {
+        background: linear-gradient(90deg, #0f172a, #1e293b);
+        color: #fff;
+        padding: 18px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      /* filtros */
+      .filters {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .filters select {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: none;
+        font-size: 14px;
+      }
+
+      /* ===== DASHBOARD ===== */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 4fr 1fr;
+        width: 80%;
+        margin: auto;
+        gap: 16px;
+        padding: 16px;
+        height: 60vh;
+      }
+
+      /* ===== MAPA ===== */
+      #map {
+        width: 100%;
+        height: 100%;
+        min-height: 320px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Ajusta as bordas para ficarem arredondadas */
+      .marker-cluster-large,
+      .marker-cluster-medium,
+      .marker-cluster-small {
+        background-color: rgba(220, 38, 38, 0.85);
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+
+      .marker-cluster-medium {
+        background-color: rgba(37, 99, 235, 0.85);
+        border-color: #1e40af;
+      }
+
+      .marker-cluster-small {
+        background-color: rgba(15, 23, 42, 0.8);
+        border-color: #020617;
+      }
+
+      /* ===== CARDS ===== */
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .card {
+        background: #ffffff;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        border-left: 5px solid #dc2626;
+      }
+
+      .card span {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      /* ===== MARKERS ===== */
+      .custom-marker {
+        border-radius: 50%;
+        transition: transform 0.15s ease;
+      }
+
+      .marker-sus {
+        background: rgba(37, 99, 235, 0.8);
+        border: 2px solid #1e40af;
+      }
+
+      .marker-nao-sus {
+        background: rgba(220, 38, 38, 0.8);
+        border: 2px solid #991b1b;
+      }
+
+      /* ===== ÁREA DO GRÁFICO ===== */
+      .chart-area {
+        background: #ffffff;
+        width: 80%;
+        margin: auto;
+        padding: 18px 22px;
+        border-radius: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      #checkboxAnos {
+        margin-bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      #checkboxAnos label {
+        font-size: 1.8rem;
+        background: #f1f5f9;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      /* ===== RESPONSIVO ===== */
+      @media (max-width: 1024px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+
+        #map {
+          height: 45vh;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h2>Monitor da Dengue — São José do Rio Preto</h2>
+
+      <div class="filters">
+        <select id="filtroAno">
+          <option value="all">Todos os anos</option>
+        </select>
+
+        <select id="filtroSUS">
+          <option value="all">SUS + Privado</option>
+          <option value="S">Somente SUS</option>
+          <option value="N">Somente Privado</option>
+        </select>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section id="map"></section>
+
+      <aside class="cards">
+        <div class="card">
+          Total de Casos<br />
+          <span id="totalCasos">—</span>
+        </div>
+      </aside>
+    </main>
+
+    <section class="chart-area">
+      <div id="checkboxAnos" style="margin-bottom: 12px"></div>
+      <canvas id="graficoHover" style="display: none"></canvas>
+      <canvas id="graficoTemporal"></canvas>
+    </section>
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script>
+    
+      const MESES = [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+      ];
+      const MESES_LABEL = [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez",
+      ];
+
+      // ================= MAPA =================
+      function initMap() {
+        const map = L.map("map").setView([-20.82, -49.38], 12);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap",
+        }).addTo(map);
+
+        const cluster = L.markerClusterGroup({
+          chunkedLoading: true,
+          removeOutsideVisibleBounds: true,
+          showCoverageOnHover: false,
+
+          iconCreateFunction: function (cluster) {
+            const count = cluster.getChildCount();
+
+            let size = "small";
+            let diameter = 40;
+
+            if (count > 100) {
+              size = "large";
+              diameter = 70;
+            } else if (count > 20) {
+              size = "medium";
+              diameter = 55;
+            }
+
+            return L.divIcon({
+              html: `<div style="
+        width:${diameter}px;
+        height:${diameter}px;
+        line-height:${diameter}px;
+        text-align:center;">
+        ${count}
+      </div>`,
+              className: `marker-cluster-${size}`,
+              iconSize: [diameter, diameter],
+            });
+          },
+        });
+
+        fetch("unidades_sjrp_data.json")
+          .then((r) => r.json())
+          .then((data) => {
+            const agrupado = [];
+
+            function distanciaEmMetros(lat1, lon1, lat2, lon2) {
+              const R = 6371000; // raio da Terra
+              const dLat = ((lat2 - lat1) * Math.PI) / 180;
+              const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+              const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos((lat1 * Math.PI) / 180) *
+                  Math.cos((lat2 * Math.PI) / 180) *
+                  Math.sin(dLon / 2) *
+                  Math.sin(dLon / 2);
+
+              return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            }
+
+            data.forEach((u) => {
+              const lat = +u.Latitude_Str;
+              const lng = +u.Longitude_Str;
+              if (!lat || !lng) return;
+
+              // Verifica se existe um ponto muito próximo já no agrupado
+              let grupo = agrupado.find(
+                (g) =>
+                  g.SUS === u.SUS &&
+                  distanciaEmMetros(g.lat, g.lng, lat, lng) < 30
+              );
+
+              if (grupo) {
+                grupo.qtd++;
+                if (!grupo.nomes.includes(u.Nome_Fantasia)) {
+                  grupo.nomes.push(u.Nome_Fantasia);
+                }
+              } else {
+                agrupado.push({
+                  lat,
+                  lng,
+                  SUS: u.SUS,
+                  qtd: 1,
+                  nomes: [u.Nome_Fantasia],
+                });
+              }
+            });
+
+            Object.values(agrupado).forEach((u) => {
+              const size = 14;
+              const icon = L.divIcon({
+                html: `
+            <div class="custom-marker ${
+              u.SUS === "S" ? "marker-sus" : "marker-nao-sus"
+            }"
+                 style="width:${size}px;height:${size}px;">
+            </div>`,
+                iconSize: [size, size],
+              });
+
+              const marker = L.marker([u.lat, u.lng], { icon });
+
+              marker.bindPopup(`
+              <b>Unidades neste local:</b><br>
+              ${u.nomes.join("<br>")}<br><br>
+              Total: ${u.qtd}<br>
+              SUS: ${u.SUS === "S" ? "Sim" : "Não"}
+
+          `
+        );
+
+              cluster.addLayer(marker);
+            });
+
+            map.addLayer(cluster);
+
+            // escala por zoom
+            map.on("zoomend", () => {
+              const scale = Math.min(1.8, Math.max(0.6, map.getZoom() / 12));
+              document
+                .querySelectorAll(".custom-marker")
+                .forEach((el) => (el.style.transform = `scale(${scale})`));
+            });
+          });
+      }
+
+      window.onload = () => setTimeout(initMap, 100);
+
+      // ================= GRÁFICO =================
+      let dadosCSV = [];
+      let chart;
+
+      function popularFiltroAno() {
+        const container = document.getElementById("checkboxAnos");
+        container.innerHTML = "";
+
+        const anos = [...new Set(dadosCSV.map((d) => d.ano))].sort();
+
+        anos.forEach((ano) => {
+          const label = document.createElement("label");
+          label.style.marginRight = "12px";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = ano;
+          checkbox.checked = true;
+
+          checkbox.onchange = atualizarGrafico;
+
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(" " + ano));
+
+          container.appendChild(label);
+        });
+      }
+
+      Papa.parse("DataDengue.csv", {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function (res) {
+          res.data.forEach((row) => {
+            if (!row.dt_notific || !row.SUS) return;
+
+            const [ano, mes] = row.dt_notific.split("-");
+
+            dadosCSV.push({
+              ano,
+              mes,
+              sus: row.SUS,
+            });
+          });
+
+          popularFiltroAno();
+          atualizarGrafico();
+        },
+      });
+
+      function atualizarGrafico() {
+        const sus = document.getElementById("filtroSUS").value;
+
+        // Captura os anos selecionados no checkbox
+        const anosSelecionados = Array.from(
+          document.querySelectorAll("#checkboxAnos input:checked")
+        ).map((cb) => cb.value);
+
+        if (anosSelecionados.length === 0) return;
+
+        // Filtra dados por SUS e anos
+        const filtrado = dadosCSV.filter(
+          (d) =>
+            (sus === "all" || d.sus === sus) && anosSelecionados.includes(d.ano)
+        );
+
+        // Estrutura para armazenar dados de cada ano (meses)
+        const dadosPorAno = {};
+
+        anosSelecionados.forEach((ano) => {
+          dadosPorAno[ano] = Array(12).fill(0);
+        });
+
+        // Preenche a quantidade de casos por mês para cada ano
+        filtrado.forEach((d) => {
+          const idxMes = parseInt(d.mes, 10) - 1;
+          if (idxMes >= 0 && idxMes < 12) {
+            dadosPorAno[d.ano][idxMes]++;
+          }
+        });
+
+        // Definir cores automáticas para cada linha de ano
+        const cores = [
+          "#d32f2f",
+          "#1976d2",
+          "#388e3c",
+          "#f57c00",
+          "#7b1fa2",
+          "#00796b",
+        ];
+
+        // Cria o dataset para o gráfico com os anos selecionados
+        const datasets = anosSelecionados.map((ano, i) => ({
+          label: ano,
+          data: dadosPorAno[ano],
+          borderColor: cores[i % cores.length],
+          backgroundColor: cores[i % cores.length] + "33",
+          tension: 0.35,
+          fill: false,
+          pointRadius: 4,
+        }));
+
+        // Calcula o total de casos
+        const total = datasets
+          .flatMap((d) => d.data)
+          .reduce((a, b) => a + b, 0);
+
+        document.getElementById("totalCasos").textContent =
+          total.toLocaleString();
+
+        // Destrói gráfico anterior e cria um novo
+        if (chart) chart.destroy();
+
+        // Criação do gráfico com as linhas para cada ano
+        chart = new Chart(document.getElementById("graficoTemporal"), {
+          type: "line",
+          data: {
+            labels: MESES_LABEL,
+            datasets,
+          },
+          options: {
+            responsive: true,
+            interaction: {
+              mode: "index",
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                position: "top",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "Casos",
+                },
+              },
+            },
+          },
+        });
+      }
+
+      document.getElementById("filtroAno").onchange = atualizarGrafico;
+      document.getElementById("filtroSUS").onchange = atualizarGrafico;
+    </script>
+  </body>
+</html>
