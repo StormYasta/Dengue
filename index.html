@@ -857,6 +857,103 @@
       font-size: 13px;
     }
 
+    .author-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 20px;
+      padding: 17px 18px;
+      border: 1px solid #dce5ff;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(36, 87, 214, 0.06), rgba(15, 143, 131, 0.04)),
+        #ffffff;
+    }
+
+    .author-info {
+      min-width: 0;
+    }
+
+    .author-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .author-name {
+      display: block;
+      color: #263247;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .author-description {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .author-links {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .author-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 39px;
+      padding: 0 13px;
+      border: 1px solid #cdd9f7;
+      border-radius: 10px;
+      color: var(--primary-dark);
+      background: var(--primary-soft);
+      font-size: 12px;
+      font-weight: 780;
+      text-decoration: none;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .author-link:hover {
+      transform: translateY(-1px);
+      border-color: #9fb5ec;
+      background: #dfe8ff;
+    }
+
+    .author-link.linkedin {
+      color: #075a97;
+      border-color: #c7def2;
+      background: #edf7ff;
+    }
+
+    .footer-links {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 7px 12px;
+      margin-top: 7px;
+    }
+
+    .footer-links a {
+      color: #52657c;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .project-reference strong {
       color: #263b71;
     }
@@ -996,6 +1093,19 @@
 
       .references-list li {
         padding-right: 13px;
+      }
+
+      .author-card {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .author-links {
+        width: 100%;
+      }
+
+      .author-link {
+        flex: 1 1 130px;
       }
     }
 
@@ -1430,6 +1540,37 @@
         recorte municipal, com finalidade exclusivamente acadêmica e de estudo.
       </p>
 
+      <div class="author-card">
+        <div class="author-info">
+          <span class="author-label">Autoria e desenvolvimento</span>
+          <strong class="author-name">João Vitor Cirelli</strong>
+          <p class="author-description">
+            Responsável pela adaptação para Campinas, preparação dos dados,
+            desenvolvimento do painel e documentação do projeto.
+          </p>
+        </div>
+
+        <div class="author-links" aria-label="Perfis do autor">
+          <a
+            class="author-link"
+            href="https://github.com/StormYasta"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub · StormYasta
+          </a>
+
+          <a
+            class="author-link linkedin"
+            href="https://www.linkedin.com/in/joaocirelli/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            LinkedIn · João Cirelli
+          </a>
+        </div>
+      </div>
+
       <div class="project-reference">
         <strong>Projeto inspirador:</strong>
         <a
@@ -1593,8 +1734,20 @@
   </main>
 
   <footer>
-    Monitor das Notificações de Dengue — Campinas/SP ·
-    Estudo independente utilizando dados públicos do SUS
+    <div>
+      Monitor das Notificações de Dengue — Campinas/SP ·
+      Estudo independente utilizando dados públicos do SUS
+    </div>
+
+    <div class="footer-links" aria-label="Autoria e redes profissionais">
+      <span>Desenvolvido por <strong>João Vitor Cirelli</strong></span>
+      <a href="https://github.com/StormYasta" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+      <a href="https://www.linkedin.com/in/joaocirelli/" target="_blank" rel="noopener noreferrer">
+        LinkedIn
+      </a>
+    </div>
   </footer>
 
   <!-- Leaflet -->
