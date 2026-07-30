@@ -1,1830 +1,2355 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Painel interativo de monitoramento das notificações de dengue em São José do Rio Preto."
-    />
-    <title>Monitor da Dengue — São José do Rio Preto</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Painel descritivo das notificações de dengue registradas em Campinas até a data mais recente disponível na base." />
+  <title>Monitor das Notificações de Dengue — Campinas</title>
+<!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Leaflet -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #172033;
+      --muted: #667085;
+      --line: #e5eaf1;
+      --primary: #2457d6;
+      --primary-dark: #173c9a;
+      --primary-soft: #eaf0ff;
+      --teal: #0f8f83;
+      --teal-soft: #e7f7f4;
+      --danger: #d94b58;
+      --danger-soft: #fff0f2;
+      --warning: #d88a12;
+      --shadow: 0 18px 45px rgba(24, 39, 75, 0.08);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 11px;
+    }
 
-    <style>
-      :root {
-        --bg: #f4f7fb;
-        --surface: #ffffff;
-        --surface-soft: #f8fafc;
-        --text: #172033;
-        --muted: #667085;
-        --line: #e5eaf1;
-        --primary: #2457d6;
-        --primary-dark: #173c9a;
-        --primary-soft: #eaf0ff;
-        --teal: #0f8f83;
-        --teal-soft: #e7f7f4;
-        --danger: #d94b58;
-        --danger-soft: #fff0f2;
-        --warning: #d88a12;
-        --shadow: 0 18px 45px rgba(24, 39, 75, 0.08);
-        --radius-lg: 22px;
-        --radius-md: 16px;
-        --radius-sm: 11px;
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(36, 87, 214, 0.08), transparent 28rem),
+        var(--bg);
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+      background:
+        linear-gradient(115deg, rgba(9, 25, 61, 0.98), rgba(23, 60, 154, 0.93)),
+        #102858;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 360px;
+      height: 360px;
+      right: -110px;
+      top: -190px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .hero::after {
+      width: 230px;
+      height: 230px;
+      right: 170px;
+      bottom: -170px;
+      border: 42px solid rgba(255, 255, 255, 0.045);
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 58px 0 84px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5ee0bd;
+      box-shadow: 0 0 0 5px rgba(94, 224, 189, 0.14);
+    }
+
+    .hero h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(2.45rem, 6vw, 4.9rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .hero-subtitle {
+      margin: 16px 0 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: clamp(1rem, 2vw, 1.25rem);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 22px;
+      margin-top: 30px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 13px;
+    }
+
+    .hero-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 40px));
+      margin: -38px auto 0;
+      padding-bottom: 64px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(229, 234, 241, 0.9);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .intro-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.75fr);
+      gap: 28px;
+      align-items: center;
+      padding: 28px 30px;
+    }
+
+    .section-kicker {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .intro-panel h2,
+    .section-heading h2 {
+      margin: 0;
+      color: #172033;
+      letter-spacing: -0.035em;
+    }
+
+    .intro-panel h2 {
+      font-size: clamp(1.45rem, 3vw, 2rem);
+    }
+
+    .intro-panel p {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .status-box {
+      padding: 18px;
+      border: 1px solid #dce5ff;
+      border-radius: var(--radius-md);
+      background: linear-gradient(145deg, #f4f7ff, #edf3ff);
+    }
+
+    .status-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .status-value {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 9px;
+      font-weight: 780;
+    }
+
+    .status-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #14a37f;
+      box-shadow: 0 0 0 6px rgba(20, 163, 127, 0.12);
+    }
+
+    .filters-panel {
+      display: flex;
+      align-items: end;
+      gap: 14px;
+      margin-top: 18px;
+      padding: 18px 20px;
+    }
+
+    .filter-group {
+      flex: 1 1 220px;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: 7px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    .select-wrap::after {
+      content: "⌄";
+      position: absolute;
+      top: 50%;
+      right: 14px;
+      transform: translateY(-58%);
+      color: #667085;
+      pointer-events: none;
+    }
+
+    select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 40px 0 13px;
+      color: #243047;
+      border: 1px solid #d8e0eb;
+      border-radius: var(--radius-sm);
+      outline: none;
+      appearance: none;
+      background: #fff;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    select:focus {
+      border-color: #8aa8f2;
+      box-shadow: 0 0 0 4px rgba(36, 87, 214, 0.1);
+    }
+
+    .reset-button {
+      min-height: 44px;
+      padding: 0 17px;
+      border: 1px solid #d8e0eb;
+      border-radius: var(--radius-sm);
+      color: #344054;
+      background: #fff;
+      font-weight: 720;
+      cursor: pointer;
+      transition: transform 0.16s ease, border-color 0.16s ease,
+        background 0.16s ease;
+    }
+
+    .reset-button:hover {
+      transform: translateY(-1px);
+      border-color: #b8c5d6;
+      background: #f8fafc;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .kpi-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 132px;
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 30px rgba(24, 39, 75, 0.05);
+    }
+
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      width: 92px;
+      height: 92px;
+      right: -44px;
+      bottom: -44px;
+      border-radius: 50%;
+      background: var(--accent-soft, var(--primary-soft));
+    }
+
+    .kpi-icon {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      color: var(--accent, var(--primary));
+      background: var(--accent-soft, var(--primary-soft));
+      font-size: 17px;
+    }
+
+    .kpi-label {
+      display: block;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .kpi-value {
+      display: block;
+      margin-top: 3px;
+      font-size: clamp(1.55rem, 3vw, 2.15rem);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+      font-weight: 820;
+    }
+
+    .kpi-card.sus {
+      --accent: var(--primary);
+      --accent-soft: var(--primary-soft);
+    }
+
+    .kpi-card.private {
+      --accent: var(--danger);
+      --accent-soft: var(--danger-soft);
+    }
+
+    .kpi-card.units {
+      --accent: var(--teal);
+      --accent-soft: var(--teal-soft);
+    }
+
+    .content-section {
+      margin-top: 52px;
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    .section-heading h2 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+    }
+
+    .section-heading p {
+      max-width: 630px;
+      margin: 9px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .section-number {
+      flex: 0 0 auto;
+      color: #cbd4e1;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      line-height: 0.9;
+      font-weight: 850;
+      letter-spacing: -0.06em;
+    }
+
+    .chart-panel,
+    .map-panel {
+      padding: 22px;
+    }
+
+    .chart-toolbar,
+    .map-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 17px;
+    }
+
+    .toolbar-title {
+      color: #344054;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    #checkboxAnos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .year-chip {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .year-chip input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .year-chip span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      min-height: 34px;
+      padding: 0 11px;
+      color: #667085;
+      border: 1px solid #dce3ed;
+      border-radius: 999px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 760;
+      transition: all 0.17s ease;
+    }
+
+    .year-chip input:checked+span {
+      color: var(--primary-dark);
+      border-color: #b7c9f7;
+      background: var(--primary-soft);
+      box-shadow: inset 0 0 0 1px rgba(36, 87, 214, 0.05);
+    }
+
+    .year-chip:hover span {
+      border-color: #aebbd0;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 410px;
+    }
+
+    .chart-empty {
+      display: none;
+      position: absolute;
+      inset: 0;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+      gap: 18px;
+    }
+
+    .stat-card {
+      min-width: 0;
+      padding: 21px;
+    }
+
+    .stat-card-wide {
+      grid-column: 1 / -1;
+    }
+
+    .stat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card-title {
+      margin: 0;
+      color: #263247;
+      font-size: 15px;
+      font-weight: 790;
+      letter-spacing: -0.015em;
+    }
+
+    .stat-card-description {
+      max-width: 680px;
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .stat-badge {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      color: var(--primary-dark);
+      border: 1px solid #c9d6f6;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .stat-chart-wrap {
+      position: relative;
+      height: 300px;
+    }
+
+    .stat-chart-wrap.compact {
+      height: 285px;
+    }
+
+    .stat-note {
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .map-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 15px;
+      color: #667085;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-scale {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 22px;
+    }
+
+    .legend-bubble {
+      display: inline-block;
+      flex: 0 0 auto;
+      border: 1px solid #a91f2c;
+      border-radius: 50%;
+      background: rgba(220, 38, 38, 0.66);
+    }
+
+    .legend-bubble.small {
+      width: 9px;
+      height: 9px;
+    }
+
+    .legend-bubble.medium {
+      width: 15px;
+      height: 15px;
+    }
+
+    .legend-bubble.large {
+      width: 22px;
+      height: 22px;
+    }
+
+    .map-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .map-summary-item {
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #e1e7ef;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .map-summary-label {
+      display: block;
+      color: #7a8699;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .map-summary-value {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      color: #263247;
+      font-size: 15px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #map {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      overflow: hidden;
+      border: 1px solid #d9e0e9;
+      border-radius: 14px;
+      background: #edf2f7;
+    }
+
+    .map-loading,
+    .map-error,
+    .map-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(248, 250, 252, 0.96);
+      z-index: 900;
+    }
+
+    .map-error {
+      color: #9f2936;
+      background: rgba(255, 245, 246, 0.97);
+    }
+
+    .map-empty {
+      inset: auto 18px 18px 18px;
+      display: block;
+      border: 1px solid #e2b7bc;
+      border-radius: 10px;
+      color: #87313a;
+      background: rgba(255, 248, 249, 0.96);
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: none;
+    }
+
+    .leaflet-container {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .leaflet-control-zoom a {
+      color: #344054;
+    }
+
+    .leaflet-control-attribution {
+      font-size: 9px;
+    }
+
+    .leaflet-tooltip.unit-tooltip {
+      padding: 7px 9px;
+      color: #344054;
+      border: 1px solid rgba(15, 23, 42, 0.17);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 5px 16px rgba(15, 23, 42, 0.12);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .leaflet-popup-content-wrapper {
+      max-height: 410px;
+      overflow: hidden;
+      border-radius: 9px;
+    }
+
+    .leaflet-popup-content {
+      width: min(310px, 68vw) !important;
+      max-height: 370px;
+      margin: 14px 15px;
+      overflow-y: auto;
+      color: #344054;
+      line-height: 1.45;
+    }
+
+    .popup-title {
+      display: block;
+      margin-bottom: 3px;
+      color: #172033;
+      font-size: 14px;
+    }
+
+    .popup-total {
+      margin-bottom: 10px;
+      color: #667085;
+      font-size: 12px;
+    }
+
+    .popup-month-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .popup-month-table th,
+    .popup-month-table td {
+      padding: 5px 6px;
+      border: 1px solid #e2e6eb;
+    }
+
+    .popup-month-table th {
+      color: #475467;
+      background: #f7f8fa;
+      text-align: left;
+    }
+
+    .popup-month-table th:last-child,
+    .popup-month-table td:last-child {
+      text-align: right;
+    }
+
+    .insight-box {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      margin-top: 18px;
+      padding: 19px 20px;
+      border: 1px solid #dce5ff;
+      border-radius: var(--radius-md);
+      background: #f6f8ff;
+    }
+
+    .insight-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      color: var(--primary-dark);
+      background: #e4ebff;
+      font-size: 18px;
+    }
+
+    .insight-box strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #263b71;
+    }
+
+    .insight-box p {
+      margin: 0;
+      color: #586b98;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .closing-panel {
+      margin-top: 26px;
+      padding: 28px 30px;
+    }
+
+    .closing-panel h2 {
+      margin: 0;
+      color: #172033;
+      font-size: clamp(1.35rem, 2.8vw, 1.8rem);
+      letter-spacing: -0.03em;
+    }
+
+    .closing-panel > p {
+      margin: 11px 0 0;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .origin-panel {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .origin-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      background: linear-gradient(
+        180deg,
+        var(--primary),
+        var(--teal)
+      );
+    }
+
+    .project-reference {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 18px;
+      padding: 13px 15px;
+      border: 1px solid #dce5ff;
+      border-radius: 12px;
+      background: #f6f8ff;
+      color: #586b98;
+      font-size: 13px;
+    }
+
+    .project-reference strong {
+      color: #263b71;
+    }
+
+    .closing-panel a {
+      color: var(--primary);
+      font-weight: 750;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .closing-panel a:hover {
+      color: var(--primary-dark);
+    }
+
+    .references-list {
+      margin: 18px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      list-style: none;
+      counter-reset: reference;
+    }
+
+    .references-list li {
+      position: relative;
+      min-width: 0;
+      padding: 14px 16px 14px 52px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #526078;
+      background: var(--surface-soft);
+      line-height: 1.58;
+      counter-increment: reference;
+    }
+
+    .references-list li::before {
+      content: counter(reference);
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      border-radius: 8px;
+      color: var(--primary-dark);
+      background: var(--primary-soft);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .references-note {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid #dce5ff;
+      border-left: 4px solid var(--primary);
+      border-radius: 12px;
+      background: #f4f8ff;
+      color: #586b98;
+      font-size: 0.92rem;
+      line-height: 1.58;
+    }
+
+    .technical-credits {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .technical-credit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      color: #526078;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .method-limitations {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .method-limitations li {
+      position: relative;
+      padding: 13px 14px 13px 38px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #526078;
+      background: var(--surface-soft);
+      line-height: 1.55;
+    }
+
+    .method-limitations li::before {
+      content: "i";
+      position: absolute;
+      top: 13px;
+      left: 13px;
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      color: var(--primary-dark);
+      background: var(--primary-soft);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    @media (max-width: 900px) {
+      .technical-credits {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .closing-panel {
+        padding: 20px 18px;
       }
 
-      * {
-        box-sizing: border-box;
+      .technical-credits,
+      .method-limitations {
+        grid-template-columns: 1fr;
       }
 
-      html {
-        scroll-behavior: smooth;
+      .references-list li {
+        padding-right: 13px;
+      }
+    }
+
+    footer {
+      padding: 26px 20px 34px;
+      color: #7d899d;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .intro-panel {
+        grid-template-columns: 1fr;
       }
 
-      body {
-        margin: 0;
-        min-width: 320px;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-          BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: var(--text);
-        background:
-          radial-gradient(circle at top right, rgba(36, 87, 214, 0.08), transparent 28rem),
-          var(--bg);
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      button,
-      select,
-      input {
-        font: inherit;
+      .filters-panel {
+        flex-wrap: wrap;
       }
 
-      .hero {
-        position: relative;
-        overflow: hidden;
-        color: #fff;
-        background:
-          linear-gradient(115deg, rgba(9, 25, 61, 0.98), rgba(23, 60, 154, 0.93)),
-          #102858;
+      .reset-button {
+        flex: 1 1 100%;
       }
 
-      .hero::before,
-      .hero::after {
-        content: "";
-        position: absolute;
-        border-radius: 50%;
-        pointer-events: none;
+      #map {
+        height: 470px;
       }
+    }
 
-      .hero::before {
-        width: 360px;
-        height: 360px;
-        right: -110px;
-        top: -190px;
-        background: rgba(255, 255, 255, 0.08);
-      }
+    @media (max-width: 640px) {
 
-      .hero::after {
-        width: 230px;
-        height: 230px;
-        right: 170px;
-        bottom: -170px;
-        border: 42px solid rgba(255, 255, 255, 0.045);
+      .hero-inner,
+      .page {
+        width: min(100% - 24px, 1180px);
       }
 
       .hero-inner {
-        position: relative;
-        z-index: 1;
-        width: min(1180px, calc(100% - 40px));
-        margin: 0 auto;
-        padding: 58px 0 84px;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        margin-bottom: 18px;
-        padding: 7px 11px;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.09);
-        font-size: 12px;
-        font-weight: 750;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .eyebrow::before {
-        content: "";
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #5ee0bd;
-        box-shadow: 0 0 0 5px rgba(94, 224, 189, 0.14);
-      }
-
-      .hero h1 {
-        max-width: 760px;
-        margin: 0;
-        font-size: clamp(2.45rem, 6vw, 4.9rem);
-        line-height: 0.98;
-        letter-spacing: -0.055em;
-      }
-
-      .hero-subtitle {
-        margin: 16px 0 0;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: clamp(1rem, 2vw, 1.25rem);
+        padding: 44px 0 70px;
       }
 
       .hero-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px 22px;
-        margin-top: 30px;
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 13px;
-      }
-
-      .hero-meta span {
-        display: inline-flex;
-        align-items: center;
+        flex-direction: column;
         gap: 7px;
       }
 
       .page {
-        width: min(1180px, calc(100% - 40px));
-        margin: -38px auto 0;
-        padding-bottom: 64px;
-        position: relative;
-        z-index: 2;
+        margin-top: -28px;
       }
 
-      .panel {
-        background: var(--surface);
-        border: 1px solid rgba(229, 234, 241, 0.9);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow);
-      }
-
-      .intro-panel {
-        display: grid;
-        grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.75fr);
-        gap: 28px;
-        align-items: center;
-        padding: 28px 30px;
-      }
-
-      .section-kicker {
-        display: block;
-        margin-bottom: 8px;
-        color: var(--primary);
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 0.09em;
-        text-transform: uppercase;
-      }
-
-      .intro-panel h2,
-      .section-heading h2 {
-        margin: 0;
-        color: #172033;
-        letter-spacing: -0.035em;
-      }
-
-      .intro-panel h2 {
-        font-size: clamp(1.45rem, 3vw, 2rem);
-      }
-
-      .intro-panel p {
-        max-width: 760px;
-        margin: 10px 0 0;
-        color: var(--muted);
-        line-height: 1.72;
-      }
-
-      .status-box {
+      .intro-panel,
+      .filters-panel,
+      .chart-panel,
+      .map-panel {
         padding: 18px;
-        border: 1px solid #dce5ff;
-        border-radius: var(--radius-md);
-        background: linear-gradient(145deg, #f4f7ff, #edf3ff);
-      }
-
-      .status-label {
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-
-      .status-value {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 9px;
-        font-weight: 780;
-      }
-
-      .status-dot {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        background: #14a37f;
-        box-shadow: 0 0 0 6px rgba(20, 163, 127, 0.12);
-      }
-
-      .filters-panel {
-        display: flex;
-        align-items: end;
-        gap: 14px;
-        margin-top: 18px;
-        padding: 18px 20px;
-      }
-
-      .filter-group {
-        flex: 1 1 220px;
-      }
-
-      .filter-group label {
-        display: block;
-        margin-bottom: 7px;
-        color: #344054;
-        font-size: 12px;
-        font-weight: 750;
-      }
-
-      .select-wrap {
-        position: relative;
-      }
-
-      .select-wrap::after {
-        content: "⌄";
-        position: absolute;
-        top: 50%;
-        right: 14px;
-        transform: translateY(-58%);
-        color: #667085;
-        pointer-events: none;
-      }
-
-      select {
-        width: 100%;
-        min-height: 44px;
-        padding: 0 40px 0 13px;
-        color: #243047;
-        border: 1px solid #d8e0eb;
-        border-radius: var(--radius-sm);
-        outline: none;
-        appearance: none;
-        background: #fff;
-        transition: border-color 0.18s ease, box-shadow 0.18s ease;
-      }
-
-      select:focus {
-        border-color: #8aa8f2;
-        box-shadow: 0 0 0 4px rgba(36, 87, 214, 0.1);
-      }
-
-      .reset-button {
-        min-height: 44px;
-        padding: 0 17px;
-        border: 1px solid #d8e0eb;
-        border-radius: var(--radius-sm);
-        color: #344054;
-        background: #fff;
-        font-weight: 720;
-        cursor: pointer;
-        transition: transform 0.16s ease, border-color 0.16s ease,
-          background 0.16s ease;
-      }
-
-      .reset-button:hover {
-        transform: translateY(-1px);
-        border-color: #b8c5d6;
-        background: #f8fafc;
       }
 
       .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
-        margin-top: 18px;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
       }
 
       .kpi-card {
-        position: relative;
-        overflow: hidden;
-        min-height: 132px;
-        padding: 20px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: var(--radius-md);
-        box-shadow: 0 12px 30px rgba(24, 39, 75, 0.05);
-      }
-
-      .kpi-card::after {
-        content: "";
-        position: absolute;
-        width: 92px;
-        height: 92px;
-        right: -44px;
-        bottom: -44px;
-        border-radius: 50%;
-        background: var(--accent-soft, var(--primary-soft));
-      }
-
-      .kpi-icon {
-        display: grid;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        color: var(--accent, var(--primary));
-        background: var(--accent-soft, var(--primary-soft));
-        font-size: 17px;
-      }
-
-      .kpi-label {
-        display: block;
-        margin-top: 14px;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 750;
-      }
-
-      .kpi-value {
-        display: block;
-        margin-top: 3px;
-        font-size: clamp(1.55rem, 3vw, 2.15rem);
-        line-height: 1.05;
-        letter-spacing: -0.045em;
-        font-weight: 820;
-      }
-
-      .kpi-card.sus {
-        --accent: var(--primary);
-        --accent-soft: var(--primary-soft);
-      }
-
-      .kpi-card.private {
-        --accent: var(--danger);
-        --accent-soft: var(--danger-soft);
-      }
-
-      .kpi-card.units {
-        --accent: var(--teal);
-        --accent-soft: var(--teal-soft);
-      }
-
-      .content-section {
-        margin-top: 52px;
+        min-height: 124px;
+        padding: 17px;
       }
 
       .section-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: end;
-        gap: 24px;
-        margin-bottom: 16px;
-      }
-
-      .section-heading h2 {
-        font-size: clamp(1.75rem, 4vw, 2.5rem);
-      }
-
-      .section-heading p {
-        max-width: 630px;
-        margin: 9px 0 0;
-        color: var(--muted);
-        line-height: 1.65;
+        align-items: start;
       }
 
       .section-number {
-        flex: 0 0 auto;
-        color: #cbd4e1;
-        font-size: clamp(2.2rem, 5vw, 4rem);
-        line-height: 0.9;
-        font-weight: 850;
-        letter-spacing: -0.06em;
-      }
-
-      .chart-panel,
-      .map-panel {
-        padding: 22px;
+        font-size: 2.6rem;
       }
 
       .chart-toolbar,
       .map-toolbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 17px;
-      }
-
-      .toolbar-title {
-        color: #344054;
-        font-size: 13px;
-        font-weight: 760;
-      }
-
-      #checkboxAnos {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .year-chip {
-        display: inline-flex;
-        align-items: center;
-        cursor: pointer;
-      }
-
-      .year-chip input {
-        position: absolute;
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      .year-chip span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 58px;
-        min-height: 34px;
-        padding: 0 11px;
-        color: #667085;
-        border: 1px solid #dce3ed;
-        border-radius: 999px;
-        background: #fff;
-        font-size: 12px;
-        font-weight: 760;
-        transition: all 0.17s ease;
-      }
-
-      .year-chip input:checked + span {
-        color: var(--primary-dark);
-        border-color: #b7c9f7;
-        background: var(--primary-soft);
-        box-shadow: inset 0 0 0 1px rgba(36, 87, 214, 0.05);
-      }
-
-      .year-chip:hover span {
-        border-color: #aebbd0;
+        align-items: flex-start;
+        flex-direction: column;
       }
 
       .chart-wrap {
-        position: relative;
-        height: 410px;
-      }
-
-      .chart-empty {
-        display: none;
-        position: absolute;
-        inset: 0;
-        place-items: center;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      .stats-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
-        gap: 18px;
-      }
-
-      .stat-card {
-        min-width: 0;
-        padding: 21px;
-      }
-
-      .stat-card-wide {
-        grid-column: 1 / -1;
-      }
-
-      .stat-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 18px;
-        margin-bottom: 16px;
-      }
-
-      .stat-card-title {
-        margin: 0;
-        color: #263247;
-        font-size: 15px;
-        font-weight: 790;
-        letter-spacing: -0.015em;
-      }
-
-      .stat-card-description {
-        max-width: 680px;
-        margin: 5px 0 0;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.55;
-      }
-
-      .stat-badge {
-        flex: 0 0 auto;
-        padding: 6px 9px;
-        color: var(--primary-dark);
-        border: 1px solid #c9d6f6;
-        border-radius: 999px;
-        background: var(--primary-soft);
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-
-      .stat-chart-wrap {
-        position: relative;
-        height: 300px;
-      }
-
-      .stat-chart-wrap.compact {
-        height: 285px;
-      }
-
-      .stat-note {
-        margin: 13px 0 0;
-        color: var(--muted);
-        font-size: 11px;
-        line-height: 1.5;
-      }
-
-      .map-legend {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 15px;
-        color: #667085;
-        font-size: 12px;
-        font-weight: 650;
-      }
-
-      .legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .legend-scale {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        min-height: 22px;
-      }
-
-      .legend-bubble {
-        display: inline-block;
-        flex: 0 0 auto;
-        border: 1px solid #a91f2c;
-        border-radius: 50%;
-        background: rgba(220, 38, 38, 0.66);
-      }
-
-      .legend-bubble.small {
-        width: 9px;
-        height: 9px;
-      }
-
-      .legend-bubble.medium {
-        width: 15px;
-        height: 15px;
-      }
-
-      .legend-bubble.large {
-        width: 22px;
-        height: 22px;
+        height: 350px;
       }
 
       .map-summary {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-        margin-bottom: 14px;
-      }
-
-      .map-summary-item {
-        min-width: 0;
-        padding: 12px 14px;
-        border: 1px solid #e1e7ef;
-        border-radius: 12px;
-        background: #f8fafc;
-      }
-
-      .map-summary-label {
-        display: block;
-        color: #7a8699;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-
-      .map-summary-value {
-        display: block;
-        margin-top: 4px;
-        overflow: hidden;
-        color: #263247;
-        font-size: 15px;
-        font-weight: 800;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        grid-template-columns: 1fr;
       }
 
       #map {
-        position: relative;
-        width: 100%;
-        height: 600px;
-        overflow: hidden;
-        border: 1px solid #d9e0e9;
-        border-radius: 14px;
-        background: #edf2f7;
+        height: 470px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
       }
 
-      .map-loading,
-      .map-error,
-      .map-empty {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 28px;
-        color: var(--muted);
-        text-align: center;
-        background: rgba(248, 250, 252, 0.96);
-        z-index: 900;
+      .stat-card-wide {
+        grid-column: auto;
       }
+    }
+  </style>
+</head>
 
-      .map-error {
-        color: #9f2936;
-        background: rgba(255, 245, 246, 0.97);
-      }
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">Vigilância epidemiológica</div>
+      <h1>Monitor das Notificações de Dengue</h1>
+      <p class="hero-subtitle">Campinas/SP</p>
+      <div class="hero-meta">
+        <span>● Análise descritiva</span>
+        <span>Série histórica até a data mais recente disponível</span>
+      </div>
+    </div>
+  </header>
 
-      .map-empty {
-        inset: auto 18px 18px 18px;
-        display: block;
-        border: 1px solid #e2b7bc;
-        border-radius: 10px;
-        color: #87313a;
-        background: rgba(255, 248, 249, 0.96);
-        font-size: 12px;
-        line-height: 1.5;
-        pointer-events: none;
-      }
+  <main class="page">
+    <section class="panel intro-panel">
+      <div>
+        <span class="section-kicker">Visão geral</span>
+        <h2>Evolução temporal e distribuição das notificações</h2>
+        <p>
+          Explore as notificações de dengue registradas em Campinas,
+          compare os períodos disponíveis e visualize os estabelecimentos de saúde
+          associados aos registros. O painel apresenta uma análise descritiva da base
+          e não realiza previsão, diagnóstico ou confirmação de casos.
+        </p>
+      </div>
 
-      .leaflet-container {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-          BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-
-      .leaflet-control-zoom a {
-        color: #344054;
-      }
-
-      .leaflet-control-attribution {
-        font-size: 9px;
-      }
-
-      .leaflet-tooltip.unit-tooltip {
-        padding: 7px 9px;
-        color: #344054;
-        border: 1px solid rgba(15, 23, 42, 0.17);
-        border-radius: 5px;
-        background: rgba(255, 255, 255, 0.94);
-        box-shadow: 0 5px 16px rgba(15, 23, 42, 0.12);
-        font-size: 12px;
-        font-weight: 650;
-      }
-
-      .leaflet-popup-content-wrapper {
-        max-height: 410px;
-        overflow: hidden;
-        border-radius: 9px;
-      }
-
-      .leaflet-popup-content {
-        width: min(310px, 68vw) !important;
-        max-height: 370px;
-        margin: 14px 15px;
-        overflow-y: auto;
-        color: #344054;
-        line-height: 1.45;
-      }
-
-      .popup-title {
-        display: block;
-        margin-bottom: 3px;
-        color: #172033;
-        font-size: 14px;
-      }
-
-      .popup-total {
-        margin-bottom: 10px;
-        color: #667085;
-        font-size: 12px;
-      }
-
-      .popup-month-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 11px;
-      }
-
-      .popup-month-table th,
-      .popup-month-table td {
-        padding: 5px 6px;
-        border: 1px solid #e2e6eb;
-      }
-
-      .popup-month-table th {
-        color: #475467;
-        background: #f7f8fa;
-        text-align: left;
-      }
-
-      .popup-month-table th:last-child,
-      .popup-month-table td:last-child {
-        text-align: right;
-      }
-
-      .insight-box {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 14px;
-        margin-top: 18px;
-        padding: 19px 20px;
-        border: 1px solid #dce5ff;
-        border-radius: var(--radius-md);
-        background: #f6f8ff;
-      }
-
-      .insight-icon {
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 11px;
-        color: var(--primary-dark);
-        background: #e4ebff;
-        font-size: 18px;
-      }
-
-      .insight-box strong {
-        display: block;
-        margin-bottom: 4px;
-        color: #263b71;
-      }
-
-      .insight-box p {
-        margin: 0;
-        color: #586b98;
-        font-size: 13px;
-        line-height: 1.55;
-      }
-
-      footer {
-        padding: 26px 20px 34px;
-        color: #7d899d;
-        text-align: center;
-        font-size: 12px;
-      }
-
-      @media (max-width: 900px) {
-        .intro-panel {
-          grid-template-columns: 1fr;
-        }
-
-        .kpi-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .filters-panel {
-          flex-wrap: wrap;
-        }
-
-        .reset-button {
-          flex: 1 1 100%;
-        }
-
-        #map {
-          height: 470px;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .hero-inner,
-        .page {
-          width: min(100% - 24px, 1180px);
-        }
-
-        .hero-inner {
-          padding: 44px 0 70px;
-        }
-
-        .hero-meta {
-          flex-direction: column;
-          gap: 7px;
-        }
-
-        .page {
-          margin-top: -28px;
-        }
-
-        .intro-panel,
-        .filters-panel,
-        .chart-panel,
-        .map-panel {
-          padding: 18px;
-        }
-
-        .kpi-grid {
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-
-        .kpi-card {
-          min-height: 124px;
-          padding: 17px;
-        }
-
-        .section-heading {
-          align-items: start;
-        }
-
-        .section-number {
-          font-size: 2.6rem;
-        }
-
-        .chart-toolbar,
-        .map-toolbar {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-
-        .chart-wrap {
-          height: 350px;
-        }
-
-        .map-summary {
-          grid-template-columns: 1fr;
-        }
-
-        #map {
-          height: 470px;
-        }
-      }
-
-      @media (max-width: 430px) {
-        .kpi-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      @media (max-width: 900px) {
-        .stats-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .stat-card-wide {
-          grid-column: auto;
-        }
-      }
-
-    </style>
-  </head>
-
-  <body>
-    <header class="hero">
-      <div class="hero-inner">
-        <div class="eyebrow">Vigilância epidemiológica</div>
-        <h1>Monitor da Dengue</h1>
-        <p class="hero-subtitle">São José do Rio Preto/SP</p>
-        <div class="hero-meta">
-          <span>● Painel interativo</span>
-          <span>Notificações por período e rede de atendimento</span>
+      <div class="status-box">
+        <span class="status-label">Cobertura temporal da base</span>
+        <div class="status-value" id="statusCobertura">
+          <span class="status-dot"></span>
+          Carregando período disponível...
         </div>
       </div>
-    </header>
+    </section>
 
-    <main class="page">
-      <section class="panel intro-panel">
+    <section class="panel filters-panel" aria-label="Filtros do painel">
+      <div class="filter-group">
+        <label for="filtroAno">Período exibido</label>
+        <div class="select-wrap">
+          <select id="filtroAno">
+            <option value="all">Todos os anos disponíveis</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="filtroSUS">Rede de atendimento</label>
+        <div class="select-wrap">
+          <select id="filtroSUS">
+            <option value="all">SUS + rede privada</option>
+            <option value="S">Somente SUS</option>
+            <option value="N">Somente rede privada</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="reset-button" id="resetFiltros" type="button">
+        Limpar filtros
+      </button>
+    </section>
+
+    <section class="kpi-grid" aria-label="Indicadores principais">
+      <article class="kpi-card">
+        <div class="kpi-icon">Σ</div>
+        <span class="kpi-label">Total de notificações</span>
+        <strong class="kpi-value" id="totalCasos">—</strong>
+      </article>
+
+      <article class="kpi-card sus">
+        <div class="kpi-icon">+</div>
+        <span class="kpi-label">Notificações SUS</span>
+        <strong class="kpi-value" id="totalSUS">—</strong>
+      </article>
+
+      <article class="kpi-card private">
+        <div class="kpi-icon">◇</div>
+        <span class="kpi-label">Notificações privadas</span>
+        <strong class="kpi-value" id="totalPrivado">—</strong>
+      </article>
+
+      <article class="kpi-card units">
+        <div class="kpi-icon">⌖</div>
+        <span class="kpi-label">Estabelecimentos com notificações</span>
+        <strong class="kpi-value" id="totalUnidades">—</strong>
+      </article>
+    </section>
+
+    <section class="content-section" id="distribuicao">
+      <div class="section-heading">
         <div>
-          <span class="section-kicker">Visão geral</span>
-          <h2>Leitura rápida da evolução e distribuição dos casos</h2>
+          <span class="section-kicker">Análise espacial</span>
+          <h2>Notificações por estabelecimento de saúde</h2>
           <p>
-            Explore o comportamento mensal das notificações, compare diferentes
-            anos e visualize a distribuição das unidades de saúde no município.
-            Os indicadores abaixo acompanham automaticamente os filtros aplicados.
+            Consulte a localização dos estabelecimentos associados às
+            notificações e filtre a visualização entre SUS e rede privada.
           </p>
         </div>
+        <span class="section-number" aria-hidden="true">01</span>
+      </div>
 
-        <div class="status-box">
-          <span class="status-label">Situação do painel</span>
-          <div class="status-value">
-            <span class="status-dot"></span>
-            Fontes locais configuradas
-          </div>
-        </div>
-      </section>
-
-      <section class="panel filters-panel" aria-label="Filtros do painel">
-        <div class="filter-group">
-          <label for="filtroAno">Período exibido</label>
-          <div class="select-wrap">
-            <select id="filtroAno">
-              <option value="all">Todos os anos disponíveis</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label for="filtroSUS">Rede de atendimento</label>
-          <div class="select-wrap">
-            <select id="filtroSUS">
-              <option value="all">SUS + rede privada</option>
-              <option value="S">Somente SUS</option>
-              <option value="N">Somente rede privada</option>
-            </select>
-          </div>
-        </div>
-
-        <button class="reset-button" id="resetFiltros" type="button">
-          Limpar filtros
-        </button>
-      </section>
-
-      <section class="kpi-grid" aria-label="Indicadores principais">
-        <article class="kpi-card">
-          <div class="kpi-icon">Σ</div>
-          <span class="kpi-label">Total filtrado</span>
-          <strong class="kpi-value" id="totalCasos">—</strong>
-        </article>
-
-        <article class="kpi-card sus">
-          <div class="kpi-icon">+</div>
-          <span class="kpi-label">Notificações SUS</span>
-          <strong class="kpi-value" id="totalSUS">—</strong>
-        </article>
-
-        <article class="kpi-card private">
-          <div class="kpi-icon">◇</div>
-          <span class="kpi-label">Notificações privadas</span>
-          <strong class="kpi-value" id="totalPrivado">—</strong>
-        </article>
-
-        <article class="kpi-card units">
-          <div class="kpi-icon">⌖</div>
-          <span class="kpi-label">Estabelecimentos com casos</span>
-          <strong class="kpi-value" id="totalUnidades">—</strong>
-        </article>
-      </section>
-
-      <section class="content-section" id="distribuicao">
-        <div class="section-heading">
+      <div class="panel map-panel">
+        <div class="map-toolbar">
           <div>
-            <span class="section-kicker">Análise espacial</span>
-            <h2>Incidência por estabelecimento de saúde</h2>
-            <p>
-              Consulte a localização das unidades notificadoras e filtre a
-              visualização entre estabelecimentos do SUS e da rede privada.
+            <span class="toolbar-title">Mapa interativo por estabelecimento</span>
+            <p class="stat-card-description">
+              O tamanho de cada círculo é proporcional ao número de notificações
+              vinculadas ao estabelecimento de saúde.
             </p>
           </div>
-          <span class="section-number" aria-hidden="true">01</span>
-        </div>
-
-        <div class="panel map-panel">
-          <div class="map-toolbar">
-            <div>
-              <span class="toolbar-title">Mapa interativo por estabelecimento</span>
-              <p class="stat-card-description">
-                Assim como na referência, o tamanho de cada círculo é proporcional
-                ao número de notificações vinculadas à unidade.
-              </p>
-            </div>
-            <div class="map-legend" aria-label="Legenda do tamanho dos círculos">
-              <span class="legend-item">
-                <span class="legend-scale" aria-hidden="true">
-                  <span class="legend-bubble small"></span>
-                  <span class="legend-bubble medium"></span>
-                  <span class="legend-bubble large"></span>
-                </span>
-                Tamanho = número de notificações
+          <div class="map-legend" aria-label="Legenda do tamanho dos círculos">
+            <span class="legend-item">
+              <span class="legend-scale" aria-hidden="true">
+                <span class="legend-bubble small"></span>
+                <span class="legend-bubble medium"></span>
+                <span class="legend-bubble large"></span>
               </span>
-            </div>
+              Tamanho = número de notificações
+            </span>
           </div>
+        </div>
 
-          <div class="map-summary" aria-label="Resumo do mapa">
-            <div class="map-summary-item">
-              <span class="map-summary-label">Período exibido</span>
-              <span class="map-summary-value" id="mapPeriodo">—</span>
-            </div>
-            <div class="map-summary-item">
-              <span class="map-summary-label">Notificações localizadas</span>
-              <span class="map-summary-value" id="mapCasos">—</span>
-            </div>
-            <div class="map-summary-item">
-              <span class="map-summary-label">Estabelecimentos</span>
-              <span class="map-summary-value" id="mapEstabelecimentos">—</span>
-            </div>
+        <div class="map-summary" aria-label="Resumo do mapa">
+          <div class="map-summary-item">
+            <span class="map-summary-label">Período exibido</span>
+            <span class="map-summary-value" id="mapPeriodo">—</span>
           </div>
-
-          <div id="map">
-            <div class="map-loading">Carregando mapa e unidades de saúde…</div>
+          <div class="map-summary-item">
+            <span class="map-summary-label">Notificações com localização</span>
+            <span class="map-summary-value" id="mapCasos">—</span>
           </div>
+          <div class="map-summary-item">
+            <span class="map-summary-label">Estabelecimentos</span>
+            <span class="map-summary-value" id="mapEstabelecimentos">—</span>
+          </div>
+        </div>
 
-          <div class="insight-box">
-            <div class="insight-icon">i</div>
+        <div id="map">
+          <div class="map-loading">Carregando mapa e unidades de saúde…</div>
+        </div>
+
+        <div class="insight-box">
+          <div class="insight-icon">i</div>
+          <div>
+            <strong>Como interpretar o mapa</strong>
+            <p>
+              Círculos maiores indicam mais notificações vinculadas ao estabelecimento.
+              Passe o mouse sobre um ponto para identificar a unidade e clique para
+              consultar o total e a distribuição mensal. A posição representa o local
+              de atendimento ou notificação, não necessariamente o endereço de residência
+              da pessoa notificada.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="sazonalidade">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Análise temporal</span>
+          <h2>Sazonalidade</h2>
+          <p>
+            Compare a quantidade mensal de notificações entre os anos e
+            identifique períodos de aumento, maior concentração e redução dos registros.
+          </p>
+        </div>
+        <span class="section-number" aria-hidden="true">02</span>
+      </div>
+
+      <div class="panel chart-panel">
+        <div class="chart-toolbar">
+          <span class="toolbar-title">Anos comparados no gráfico</span>
+          <div id="checkboxAnos" aria-label="Seleção de anos"></div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="graficoTemporal"></canvas>
+          <div class="chart-empty" id="chartEmpty">
+            Selecione ao menos um ano para visualizar o gráfico.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section" id="estatisticas">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Resumo estatístico</span>
+          <h2>Comportamento das notificações</h2>
+          <p>
+            Observe a evolução anual, compare medidas de tendência central e
+            avalie a participação das redes pública e privada nos dados filtrados.
+          </p>
+        </div>
+        <span class="section-number" aria-hidden="true">03</span>
+      </div>
+
+      <div class="stats-grid">
+        <article class="panel stat-card stat-card-wide">
+          <div class="stat-card-header">
             <div>
-              <strong>Como interpretar o mapa</strong>
-              <p>
-                Círculos maiores indicam mais notificações. Passe o mouse sobre um
-                ponto para identificar a unidade e clique para consultar o total e
-                a distribuição mensal. Os filtros de ano e rede também atualizam o mapa.
+              <h3 class="stat-card-title">Total anual e variação entre anos</h3>
+              <p class="stat-card-description">
+                As barras mostram o total de notificações e a linha indica a
+                variação percentual em relação ao ano selecionado imediatamente anterior.
               </p>
             </div>
+            <span class="stat-badge">Tendência</span>
           </div>
-        </div>
-      </section>
-
-      <section class="content-section" id="sazonalidade">
-        <div class="section-heading">
-          <div>
-            <span class="section-kicker">Análise temporal</span>
-            <h2>Sazonalidade</h2>
-            <p>
-              Compare a quantidade mensal de notificações entre os anos e
-              identifique períodos de aceleração, pico e redução dos casos.
-            </p>
+          <div class="stat-chart-wrap">
+            <canvas id="graficoAnual"></canvas>
           </div>
-          <span class="section-number" aria-hidden="true">02</span>
-        </div>
+        </article>
 
-        <div class="panel chart-panel">
-          <div class="chart-toolbar">
-            <span class="toolbar-title">Anos comparados no gráfico</span>
-            <div id="checkboxAnos" aria-label="Seleção de anos"></div>
+        <article class="panel stat-card">
+          <div class="stat-card-header">
+            <div>
+              <h3 class="stat-card-title">Média e mediana por mês</h3>
+              <p class="stat-card-description">
+                A diferença entre média e mediana ajuda a identificar meses
+                influenciados por anos excepcionalmente epidêmicos.
+              </p>
+            </div>
+            <span class="stat-badge">Sazonalidade</span>
           </div>
-
-          <div class="chart-wrap">
-            <canvas id="graficoTemporal"></canvas>
-            <div class="chart-empty" id="chartEmpty">
-              Selecione ao menos um ano para visualizar o gráfico.
-            </div>
+          <div class="stat-chart-wrap compact">
+            <canvas id="graficoMediaMediana"></canvas>
           </div>
-        </div>
-      </section>
+        </article>
 
-      <section class="content-section" id="estatisticas">
-        <div class="section-heading">
-          <div>
-            <span class="section-kicker">Resumo estatístico</span>
-            <h2>Comportamento das notificações</h2>
-            <p>
-              Observe a evolução anual, compare medidas de tendência central e
-              avalie a participação das redes pública e privada nos dados filtrados.
-            </p>
+        <article class="panel stat-card">
+          <div class="stat-card-header">
+            <div>
+              <h3 class="stat-card-title">Participação por rede</h3>
+              <p class="stat-card-description">
+                Distribuição das notificações entre estabelecimentos do SUS e
+                da rede privada, respeitando os filtros ativos.
+              </p>
+            </div>
+            <span class="stat-badge">Composição</span>
           </div>
-          <span class="section-number" aria-hidden="true">03</span>
-        </div>
+          <div class="stat-chart-wrap compact">
+            <canvas id="graficoRede"></canvas>
+          </div>
+          <p class="stat-note">
+            Ao filtrar apenas uma rede, o gráfico passa a representar a composição
+            do subconjunto selecionado.
+          </p>
+        </article>
+      </div>
+    </section>
+    <section class="panel closing-panel origin-panel" id="origem-projeto">
+      <span class="section-kicker">Origem e inspiração do projeto</span>
+      <h2>Uma versão independente voltada para Campinas</h2>
 
-        <div class="stats-grid">
-          <article class="panel stat-card stat-card-wide">
-            <div class="stat-card-header">
-              <div>
-                <h3 class="stat-card-title">Total anual e variação entre anos</h3>
-                <p class="stat-card-description">
-                  As barras mostram o número de notificações e a linha indica a
-                  variação percentual em relação ao ano selecionado imediatamente anterior.
-                </p>
-              </div>
-              <span class="stat-badge">Tendência</span>
-            </div>
-            <div class="stat-chart-wrap">
-              <canvas id="graficoAnual"></canvas>
-            </div>
-          </article>
+      <p>
+        Este estudo surgiu a partir do contato com um projeto de monitoramento das
+        notificações de dengue desenvolvido para o município de São José do Rio Preto.
+        A experiência despertou meu interesse em compreender, de forma mais aprofundada,
+        todo o fluxo de trabalho envolvido na análise de dados epidemiológicos: desde a
+        obtenção das bases públicas, passando pelo tratamento e integração dos dados,
+        até a construção de visualizações interativas.
+      </p>
 
-          <article class="panel stat-card">
-            <div class="stat-card-header">
-              <div>
-                <h3 class="stat-card-title">Média e mediana por mês</h3>
-                <p class="stat-card-description">
-                  A diferença entre média e mediana ajuda a identificar meses
-                  influenciados por anos excepcionalmente epidêmicos.
-                </p>
-              </div>
-              <span class="stat-badge">Sazonalidade</span>
-            </div>
-            <div class="stat-chart-wrap compact">
-              <canvas id="graficoMediaMediana"></canvas>
-            </div>
-          </article>
+      <p>
+        Com esse objetivo, desenvolvi uma versão independente voltada para Campinas/SP
+        como exercício de aprendizado e aplicação prática de conceitos relacionados à
+        ciência de dados, Python, pandas, análise epidemiológica descritiva e
+        desenvolvimento de painéis interativos.
+      </p>
 
-          <article class="panel stat-card">
-            <div class="stat-card-header">
-              <div>
-                <h3 class="stat-card-title">Participação por rede</h3>
-                <p class="stat-card-description">
-                  Distribuição das notificações entre estabelecimentos do SUS e
-                  da rede privada, respeitando os filtros ativos.
-                </p>
-              </div>
-              <span class="stat-badge">Composição</span>
-            </div>
-            <div class="stat-chart-wrap compact">
-              <canvas id="graficoRede"></canvas>
-            </div>
-            <p class="stat-note">
-              Ao filtrar apenas uma rede, o gráfico passa a representar a composição
-              do subconjunto selecionado.
-            </p>
-          </article>
-        </div>
-      </section>
-    </main>
+      <p>
+        Embora inspirado na abordagem metodológica do projeto original, este trabalho
+        foi desenvolvido de forma independente, utilizando dados públicos e um novo
+        recorte municipal, com finalidade exclusivamente acadêmica e de estudo.
+      </p>
 
-    <footer>
-      Monitor da Dengue — São José do Rio Preto/SP
-    </footer>
+      <div class="project-reference">
+        <strong>Projeto inspirador:</strong>
+        <a
+          href="https://github.com/Mas-Rodrigues/Monitor-da-Dengue"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Mas-Rodrigues — Monitor da Dengue
+        </a>
+        <span>· São José do Rio Preto/SP</span>
+      </div>
+    </section>
 
-    <!-- Leaflet -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <section class="panel closing-panel" id="fontes-metodologia">
+      <span class="section-kicker">Referências</span>
+      <h2>Fontes, referências e projeto inspirador</h2>
 
-    <script>
-      const MESES = [
-        "01", "02", "03", "04", "05", "06",
-        "07", "08", "09", "10", "11", "12"
-      ];
+      <ol class="references-list">
+        <li>
+          BRASIL. Ministério da Saúde.
+          <a
+            href="https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/d/dengue/casos-suspeitos/not-de-casos-suspeitos"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Notificações de casos suspeitos de dengue
+          </a>.
+          Brasília, DF: Ministério da Saúde. Acesso em: 29 jul. 2026.
+        </li>
 
-      const MESES_LABEL = [
-        "Jan",
-        "Fev",
-        "Mar",
-        "Abr",
-        "Mai",
-        "Jun",
-        "Jul",
-        "Ago",
-        "Set",
-        "Out",
-        "Nov",
-        "Dez",
-      ];
+        <li>
+          BRASIL. Ministério da Saúde.
+          <a
+            href="https://www.gov.br/saude/pt-br/composicao/svsa/sistemas-de-informacao/sinan"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Sistema de Informação de Agravos de Notificação — SINAN
+          </a>.
+          Brasília, DF: Ministério da Saúde. Acesso em: 29 jul. 2026.
+        </li>
 
-      const CORES_ANOS = [
-        "#2457d6",
-        "#0f8f83",
-        "#d94b58",
-        "#d88a12",
-        "#7a52c7",
-        "#2d7b9f",
-        "#56783b",
-        "#bd5a1e",
-        "#8c5b76",
-        "#52657c",
-      ];
+        <li>
+          BRASIL. Ministério da Saúde.
+          <a
+            href="https://www.gov.br/saude/pt-br/composicao/sectics/daf/ceaf/faq/o-que-e-o-cnes"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Cadastro Nacional de Estabelecimentos de Saúde — CNES
+          </a>.
+          Brasília, DF: Ministério da Saúde. Acesso em: 29 jul. 2026.
+        </li>
 
-      let dadosCSV = [];
-      let chart = null;
-      let chartAnual = null;
-      let chartMediaMediana = null;
-      let chartRede = null;
-      let map = null;
-      let camadaCasos = null;
-      let camadaBairros = null;
+        <li>
+          COELHO, Flávio Codeço; VACARO, Luã et al.
+          <a
+            href="https://github.com/AlertaDengue/PySUS"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            PySUS
+          </a>.
+          Software para acesso e análise de dados públicos de saúde do Brasil.
+          A versão utilizada deve permanecer registrada no notebook.
+        </li>
 
-      // Defina como "bairros_sjrp.geojson" somente quando o arquivo existir.
-      const ARQUIVO_BAIRROS = null;
+        <li>
+          THE PANDAS DEVELOPMENT TEAM.
+          <a
+            href="https://pandas.pydata.org/about/citing.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            pandas-dev/pandas: Pandas
+          </a>.
+          Zenodo. DOI: 10.5281/zenodo.3509134.
+        </li>
 
-      let catalogoUnidades = [];
-      let indiceUnidadesPorId = new Map();
-      let indiceUnidadesPorNome = new Map();
+        <li>
+          GOOGLE.
+          <a
+            href="https://research.google.com/colaboratory/faq.html?hl=pt-BR"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Colaboratory: perguntas frequentes
+          </a>.
+          Acesso em: 29 jul. 2026.
+        </li>
 
-      function normalizarSUS(valor) {
-        return String(valor || "").trim().toUpperCase();
+        <li>
+          MAS-RODRIGUES.
+          <a
+            href="https://github.com/Mas-Rodrigues/Monitor-da-Dengue"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Monitor da Dengue
+          </a>.
+          GitHub. Projeto desenvolvido para São José do Rio Preto e utilizado como
+          inspiração técnica para esta iniciativa pessoal.
+        </li>
+      </ol>
+
+      <div class="references-note">
+        <strong>Reprodutibilidade:</strong> as versões exatas do PySUS e do pandas
+        utilizadas devem permanecer registradas no notebook do Google Colab. A versão
+        atual do painel utiliza um arquivo JSON agregado; Papa Parse foi utilizado na
+        etapa anterior, quando a leitura era feita diretamente a partir do CSV.
+      </div>
+
+      <div class="technical-credits" aria-label="Créditos técnicos da visualização">
+        <a class="technical-credit" href="https://leafletjs.com/reference.html" target="_blank" rel="noopener noreferrer">
+          Leaflet
+        </a>
+        <a class="technical-credit" href="https://www.chartjs.org/docs/latest/" target="_blank" rel="noopener noreferrer">
+          Chart.js
+        </a>
+        <a class="technical-credit" href="https://www.papaparse.com/docs" target="_blank" rel="noopener noreferrer">
+          Papa Parse
+        </a>
+        <a class="technical-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+          OpenStreetMap
+        </a>
+        <a class="technical-credit" href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">
+          CARTO
+        </a>
+      </div>
+    </section>
+
+    <section class="panel closing-panel" id="nota-metodologica">
+      <span class="section-kicker">Limitações da análise</span>
+      <h2>Sobre a interpretação dos dados</h2>
+
+      <p>
+        O painel apresenta uma análise descritiva das notificações registradas até
+        a data mais recente disponível na base processada. Suas limitações definem
+        o que pode — e o que não pode — ser interpretado a partir das visualizações.
+      </p>
+
+      <ul class="method-limitations">
+        <li>
+          Notificações não equivalem necessariamente a casos confirmados e pode
+          existir subnotificação.
+        </li>
+        <li>
+          Os registros podem ser corrigidos posteriormente e campos ausentes podem
+          afetar alguns totais.
+        </li>
+        <li>
+          O estabelecimento associado ao registro não representa automaticamente
+          o local de transmissão ou o endereço de residência.
+        </li>
+        <li>
+          A data exibida corresponde à última atualização da base processada, e não
+          a um fluxo de informações em tempo real.
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    Monitor das Notificações de Dengue — Campinas/SP ·
+    Estudo independente utilizando dados públicos do SUS
+  </footer>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const CONFIG = {
+      municipio: "Campinas",
+      uf: "SP",
+      centroMapa: [-22.9056, -47.0608],
+      zoomInicial: 11,
+      arquivoDengue: "dados_dengue_campinas.json",
+      arquivoUnidades: null,
+      arquivoBairros: null
+    };
+
+    const MESES = [
+      "01", "02", "03", "04", "05", "06",
+      "07", "08", "09", "10", "11", "12"
+    ];
+
+    const MESES_LABEL = [
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+    ];
+
+    const CORES_ANOS = [
+      "#2457d6",
+      "#0f8f83",
+      "#d94b58",
+      "#d88a12",
+      "#7a52c7",
+      "#2d7b9f",
+      "#56783b",
+      "#bd5a1e",
+      "#8c5b76",
+      "#52657c",
+    ];
+
+    let dadosCSV = [];
+    let metaDados = {};
+    let chart = null;
+    let chartAnual = null;
+    let chartMediaMediana = null;
+    let chartRede = null;
+    let map = null;
+    let camadaCasos = null;
+    let camadaBairros = null;
+
+    // Defina como "bairros_campinas.geojson" somente quando o arquivo existir.
+    const ARQUIVO_BAIRROS = CONFIG.arquivoBairros;
+
+    let catalogoUnidades = [];
+    let indiceUnidadesPorId = new Map();
+    let indiceUnidadesPorNome = new Map();
+
+    function normalizarSUS(valor) {
+      return String(valor || "").trim().toUpperCase();
+    }
+
+    function escaparHTML(valor) {
+      return String(valor ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatarNumero(valor) {
+      return Number(valor || 0).toLocaleString("pt-BR");
+    }
+
+    function formatarDataBR(dataISO) {
+      if (!dataISO) return "data não informada";
+
+      const data = new Date(`${dataISO}T12:00:00`);
+      if (Number.isNaN(data.getTime())) return dataISO;
+
+      return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(data);
+    }
+
+    function atualizarCoberturaTemporal() {
+      const elemento = document.getElementById("statusCobertura");
+      if (!elemento) return;
+
+      const primeiraData = metaDados.primeiraData;
+      const ultimaData = metaDados.ultimaData;
+
+      if (!primeiraData || !ultimaData) {
+        elemento.innerHTML =
+          '<span class="status-dot"></span> Período não identificado na base';
+        return;
       }
 
-      function escaparHTML(valor) {
-        return String(valor ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
+      elemento.innerHTML =
+        `<span class="status-dot"></span> ` +
+        `${formatarDataBR(primeiraData)} a ${formatarDataBR(ultimaData)}`;
+    }
+
+    function distanciaEmMetros(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function primeiroValor(objeto, nomes) {
+      for (const nome of nomes) {
+        const valor = objeto?.[nome];
+        if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
+          return valor;
+        }
       }
+      return "";
+    }
 
-      function formatarNumero(valor) {
-        return Number(valor || 0).toLocaleString("pt-BR");
+    function normalizarIdentificador(valor) {
+      const texto = String(valor ?? "").trim().replace(/\.0$/, "");
+      if (!texto) return "";
+      return texto.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    }
+
+    function variantesIdentificador(valor) {
+      const normalizado = normalizarIdentificador(valor);
+      if (!normalizado) return [];
+
+      const variantes = new Set([normalizado]);
+      if (/^\d+$/.test(normalizado)) {
+        variantes.add(String(Number(normalizado)));
+        variantes.add(normalizado.padStart(7, "0"));
       }
+      return [...variantes];
+    }
 
-      function distanciaEmMetros(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = ((lat2 - lat1) * Math.PI) / 180;
-        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    function normalizarNome(valor) {
+      return String(valor ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, " ")
+        .trim()
+        .toUpperCase();
+    }
 
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
+    function obterIdentificadorUnidade(registro) {
+      return primeiroValor(registro, [
+        "id_unidade",
+        "ID_UNIDADE",
+        "id_unidade_notificadora",
+        "ID_UNIDADE_NOTIFICADORA",
+        "nu_id_unidade",
+        "NU_ID_UNIDADE",
+        "CO_UNIDADE_NOTIFICADORA",
+        "co_unidade_notificadora",
+        "code_cnes",
+        "CODE_CNES",
+        "CO_CNES",
+        "co_cnes",
+        "CO_CNES_ESTABELECIMENTO",
+        "co_cnes_estabelecimento",
+        "CNES",
+        "cnes",
+        "codigo_cnes",
+        "CODIGO_CNES",
+      ]);
+    }
 
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      }
+    function obterNomeUnidade(registro) {
+      return primeiroValor(registro, [
+        "Nome_Fantasia",
+        "nome_fantasia",
+        "NO_FANTASIA",
+        "no_fantasia",
+        "NOME_UNIDADE",
+        "nome_unidade",
+        "ESTABELECIMENTO",
+        "estabelecimento",
+      ]);
+    }
 
-      function primeiroValor(objeto, nomes) {
-        for (const nome of nomes) {
-          const valor = objeto?.[nome];
-          if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
-            return valor;
+    function obterCoordenadas(registro) {
+      const latBruta = primeiroValor(registro, [
+        "Latitude_Str",
+        "latitude",
+        "LATITUDE",
+        "lat",
+        "VL_LATITUDE",
+      ]);
+      const lngBruta = primeiroValor(registro, [
+        "Longitude_Str",
+        "longitude",
+        "LONGITUDE",
+        "lng",
+        "lon",
+        "VL_LONGITUDE",
+      ]);
+
+      const lat = String(latBruta).trim() === "" ? NaN : Number(latBruta);
+      const lng = String(lngBruta).trim() === "" ? NaN : Number(lngBruta);
+
+      return {
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+      };
+    }
+
+    function prepararCatalogoUnidades(data) {
+      const unidadesUnicas = new Map();
+
+      data.forEach((registro) => {
+        const coordenadas = obterCoordenadas(registro);
+        if (coordenadas.lat === null || coordenadas.lng === null) return;
+
+        const unidade = {
+          id: obterIdentificadorUnidade(registro),
+          nome: obterNomeUnidade(registro) || "Unidade sem nome informado",
+          sus: normalizarSUS(primeiroValor(registro, ["SUS", "sus"])),
+          lat: coordenadas.lat,
+          lng: coordenadas.lng,
+        };
+
+        const chave =
+          variantesIdentificador(unidade.id)[0] ||
+          normalizarNome(unidade.nome) ||
+          `${unidade.lat.toFixed(8)},${unidade.lng.toFixed(8)}`;
+
+        if (!unidadesUnicas.has(chave)) {
+          unidadesUnicas.set(chave, unidade);
+        }
+      });
+
+      catalogoUnidades = Array.from(unidadesUnicas.values());
+      indiceUnidadesPorId = new Map();
+      indiceUnidadesPorNome = new Map();
+
+      catalogoUnidades.forEach((unidade) => {
+        variantesIdentificador(unidade.id).forEach((chave) => {
+          if (!indiceUnidadesPorId.has(chave)) {
+            indiceUnidadesPorId.set(chave, unidade);
           }
+        });
+
+        const chaveNome = normalizarNome(unidade.nome);
+        if (chaveNome && !indiceUnidadesPorNome.has(chaveNome)) {
+          indiceUnidadesPorNome.set(chaveNome, unidade);
         }
-        return "";
+      });
+
+      console.info(
+        `${catalogoUnidades.length} estabelecimentos únicos indexados.`
+      );
+    }
+
+    function localizarUnidade(item) {
+      for (const chave of variantesIdentificador(item.unidadeId)) {
+        const unidade = indiceUnidadesPorId.get(chave);
+        if (unidade) return unidade;
       }
 
-      function normalizarIdentificador(valor) {
-        const texto = String(valor ?? "").trim().replace(/\.0$/, "");
-        if (!texto) return "";
-        return texto.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      const chaveNome = normalizarNome(item.unidadeNome);
+      if (chaveNome && indiceUnidadesPorNome.has(chaveNome)) {
+        return indiceUnidadesPorNome.get(chaveNome);
       }
 
-      function variantesIdentificador(valor) {
-        const normalizado = normalizarIdentificador(valor);
-        if (!normalizado) return [];
-
-        const variantes = new Set([normalizado]);
-        if (/^\d+$/.test(normalizado)) {
-          variantes.add(String(Number(normalizado)));
-          variantes.add(normalizado.padStart(7, "0"));
-        }
-        return [...variantes];
-      }
-
-      function normalizarNome(valor) {
-        return String(valor ?? "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-zA-Z0-9]+/g, " ")
-          .trim()
-          .toUpperCase();
-      }
-
-      function obterIdentificadorUnidade(registro) {
-        return primeiroValor(registro, [
-          "id_unidade",
-          "ID_UNIDADE",
-          "id_unidade_notificadora",
-          "ID_UNIDADE_NOTIFICADORA",
-          "nu_id_unidade",
-          "NU_ID_UNIDADE",
-          "CO_UNIDADE_NOTIFICADORA",
-          "co_unidade_notificadora",
-          "code_cnes",
-          "CODE_CNES",
-          "CO_CNES",
-          "co_cnes",
-          "CO_CNES_ESTABELECIMENTO",
-          "co_cnes_estabelecimento",
-          "CNES",
-          "cnes",
-          "codigo_cnes",
-          "CODIGO_CNES",
-        ]);
-      }
-
-      function obterNomeUnidade(registro) {
-        return primeiroValor(registro, [
-          "Nome_Fantasia",
-          "nome_fantasia",
-          "NO_FANTASIA",
-          "no_fantasia",
-          "NOME_UNIDADE",
-          "nome_unidade",
-          "ESTABELECIMENTO",
-          "estabelecimento",
-        ]);
-      }
-
-      function obterCoordenadas(registro) {
-        const latBruta = primeiroValor(registro, [
-          "Latitude_Str",
-          "latitude",
-          "LATITUDE",
-          "lat",
-          "VL_LATITUDE",
-        ]);
-        const lngBruta = primeiroValor(registro, [
-          "Longitude_Str",
-          "longitude",
-          "LONGITUDE",
-          "lng",
-          "lon",
-          "VL_LONGITUDE",
-        ]);
-
-        const lat = String(latBruta).trim() === "" ? NaN : Number(latBruta);
-        const lng = String(lngBruta).trim() === "" ? NaN : Number(lngBruta);
-
+      if (Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
         return {
-          lat: Number.isFinite(lat) ? lat : null,
-          lng: Number.isFinite(lng) ? lng : null,
+          id: item.unidadeId,
+          nome: item.unidadeNome || "Unidade sem nome informado",
+          sus: item.sus,
+          lat: item.lat,
+          lng: item.lng,
         };
       }
 
-      function prepararCatalogoUnidades(data) {
-        const unidadesUnicas = new Map();
+      return null;
+    }
 
-        data.forEach((registro) => {
-          const coordenadas = obterCoordenadas(registro);
-          if (coordenadas.lat === null || coordenadas.lng === null) return;
+    function criarTabelaMensal(meses) {
+      const linhas = MESES.map((mes, indice) => ({
+        mes: MESES_LABEL[indice],
+        casos: meses[mes] || 0,
+      })).filter((item) => item.casos > 0);
 
-          const unidade = {
-            id: obterIdentificadorUnidade(registro),
-            nome: obterNomeUnidade(registro) || "Unidade sem nome informado",
-            sus: normalizarSUS(primeiroValor(registro, ["SUS", "sus"])),
-            lat: coordenadas.lat,
-            lng: coordenadas.lng,
-          };
-
-          const chave =
-            variantesIdentificador(unidade.id)[0] ||
-            normalizarNome(unidade.nome) ||
-            `${unidade.lat.toFixed(8)},${unidade.lng.toFixed(8)}`;
-
-          if (!unidadesUnicas.has(chave)) {
-            unidadesUnicas.set(chave, unidade);
-          }
-        });
-
-        catalogoUnidades = Array.from(unidadesUnicas.values());
-        indiceUnidadesPorId = new Map();
-        indiceUnidadesPorNome = new Map();
-
-        catalogoUnidades.forEach((unidade) => {
-          variantesIdentificador(unidade.id).forEach((chave) => {
-            if (!indiceUnidadesPorId.has(chave)) {
-              indiceUnidadesPorId.set(chave, unidade);
-            }
-          });
-
-          const chaveNome = normalizarNome(unidade.nome);
-          if (chaveNome && !indiceUnidadesPorNome.has(chaveNome)) {
-            indiceUnidadesPorNome.set(chaveNome, unidade);
-          }
-        });
-
-        console.info(
-          `${catalogoUnidades.length} estabelecimentos únicos indexados.`
-        );
+      if (!linhas.length) {
+        return '<em>Nenhum dado mensal disponível.</em>';
       }
 
-      function localizarUnidade(item) {
-        for (const chave of variantesIdentificador(item.unidadeId)) {
-          const unidade = indiceUnidadesPorId.get(chave);
-          if (unidade) return unidade;
-        }
-
-        const chaveNome = normalizarNome(item.unidadeNome);
-        if (chaveNome && indiceUnidadesPorNome.has(chaveNome)) {
-          return indiceUnidadesPorNome.get(chaveNome);
-        }
-
-        if (Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
-          return {
-            id: item.unidadeId,
-            nome: item.unidadeNome || "Unidade sem nome informado",
-            sus: item.sus,
-            lat: item.lat,
-            lng: item.lng,
-          };
-        }
-
-        return null;
-      }
-
-      function criarTabelaMensal(meses) {
-        const linhas = MESES.map((mes, indice) => ({
-          mes: MESES_LABEL[indice],
-          casos: meses[mes] || 0,
-        })).filter((item) => item.casos > 0);
-
-        if (!linhas.length) {
-          return '<em>Nenhum dado mensal disponível.</em>';
-        }
-
-        return `
+      return `
           <table class="popup-month-table">
-            <thead><tr><th>Mês</th><th>Casos</th></tr></thead>
+            <thead><tr><th>Mês</th><th>Notificações</th></tr></thead>
             <tbody>
               ${linhas
-                .map(
-                  (item) =>
-                    `<tr><td>${item.mes}</td><td>${formatarNumero(item.casos)}</td></tr>`
-                )
-                .join("")}
+          .map(
+            (item) =>
+              `<tr><td>${item.mes}</td><td>${formatarNumero(item.casos)}</td></tr>`
+          )
+          .join("")}
             </tbody>
           </table>
         `;
-      }
+    }
 
-      function obterDescricaoPeriodo(anosSelecionados) {
-        if (!anosSelecionados.length) return "Nenhum ano";
-        if (anosSelecionados.length === 1) return anosSelecionados[0];
-        const ordenados = [...anosSelecionados].sort();
-        return `${ordenados[0]}–${ordenados[ordenados.length - 1]}`;
-      }
+    function obterDescricaoPeriodo(anosSelecionados) {
+      if (!anosSelecionados.length) return "Nenhum ano";
+      if (anosSelecionados.length === 1) return anosSelecionados[0];
+      const ordenados = [...anosSelecionados].sort();
+      return `${ordenados[0]}–${ordenados[ordenados.length - 1]}`;
+    }
 
-      function atualizarResumoMapa(periodo, casos, estabelecimentos) {
-        document.getElementById("mapPeriodo").textContent = periodo;
-        document.getElementById("mapCasos").textContent = formatarNumero(casos);
-        document.getElementById("mapEstabelecimentos").textContent =
-          formatarNumero(estabelecimentos);
-        document.getElementById("totalUnidades").textContent =
-          formatarNumero(estabelecimentos);
-      }
+    function atualizarResumoMapa(periodo, casos, estabelecimentos) {
+      document.getElementById("mapPeriodo").textContent = periodo;
+      document.getElementById("mapCasos").textContent = formatarNumero(casos);
+      document.getElementById("mapEstabelecimentos").textContent =
+        formatarNumero(estabelecimentos);
+      document.getElementById("totalUnidades").textContent =
+        formatarNumero(estabelecimentos);
+    }
 
-      function renderizarMarcadores() {
-        if (!map || !camadaCasos) return;
+    function renderizarMarcadores() {
+      if (!map || !camadaCasos) return;
 
-        const anosSelecionados = obterAnosSelecionados();
-        const filtroSUS = document.getElementById("filtroSUS").value;
-        const filtrado = dadosCSV.filter(
-          (item) =>
-            anosSelecionados.includes(item.ano) &&
-            (filtroSUS === "all" || item.sus === filtroSUS)
-        );
+      const anosSelecionados = obterAnosSelecionados();
+      const filtroSUS = document.getElementById("filtroSUS").value;
+      const filtrado = dadosCSV.filter(
+        (item) =>
+          anosSelecionados.includes(item.ano) &&
+          (filtroSUS === "all" || item.sus === filtroSUS)
+      );
 
-        camadaCasos.clearLayers();
-        document.querySelector("#map .map-empty")?.remove();
+      camadaCasos.clearLayers();
+      document.querySelector("#map .map-empty")?.remove();
 
-        const agrupado = new Map();
-        let registrosSemLocalizacao = 0;
+      const agrupado = new Map();
+      let registrosSemLocalizacao = 0;
 
-        filtrado.forEach((item) => {
-          const unidade = localizarUnidade(item);
-          if (!unidade) {
-            registrosSemLocalizacao += 1;
-            return;
-          }
+      filtrado.forEach((item) => {
+        const unidade = localizarUnidade(item);
+        if (!unidade) {
+          registrosSemLocalizacao += item.notificacoes;
+          return;
+        }
 
-          const chave =
-            variantesIdentificador(unidade.id)[0] ||
-            normalizarNome(unidade.nome) ||
-            `${unidade.lat},${unidade.lng}`;
+        const chave =
+          variantesIdentificador(unidade.id)[0] ||
+          normalizarNome(unidade.nome) ||
+          `${unidade.lat},${unidade.lng}`;
 
-          if (!agrupado.has(chave)) {
-            agrupado.set(chave, {
-              unidade,
-              total: 0,
-              meses: Object.fromEntries(MESES.map((mes) => [mes, 0])),
-            });
-          }
+        if (!agrupado.has(chave)) {
+          agrupado.set(chave, {
+            unidade,
+            total: 0,
+            meses: Object.fromEntries(MESES.map((mes) => [mes, 0])),
+          });
+        }
 
-          const grupo = agrupado.get(chave);
-          grupo.total += 1;
-          if (MESES.includes(item.mes)) grupo.meses[item.mes] += 1;
+        const grupo = agrupado.get(chave);
+        grupo.total += item.notificacoes;
+        if (MESES.includes(item.mes)) grupo.meses[item.mes] += item.notificacoes;
+      });
+
+      const pontos = [];
+      let totalLocalizado = 0;
+
+      agrupado.forEach(({ unidade, total, meses }) => {
+        totalLocalizado += total;
+        const raio = Math.max(3.5, Math.min(15, Math.sqrt(total) / 1.5 + 2.5));
+
+        const marcador = L.circleMarker([unidade.lat, unidade.lng], {
+          radius: raio,
+          color: "#b91c2b",
+          weight: 1,
+          opacity: 0.92,
+          fillColor: "#dc2626",
+          fillOpacity: 0.68,
         });
 
-        const pontos = [];
-        let totalLocalizado = 0;
+        marcador.bindTooltip(
+          `${escaparHTML(unidade.nome)}: ${formatarNumero(total)} notificações`,
+          {
+            direction: "auto",
+            className: "unit-tooltip",
+            sticky: true,
+          }
+        );
 
-        agrupado.forEach(({ unidade, total, meses }) => {
-          totalLocalizado += total;
-          const raio = Math.max(3.5, Math.min(15, Math.sqrt(total) / 1.5 + 2.5));
-
-          const marcador = L.circleMarker([unidade.lat, unidade.lng], {
-            radius: raio,
-            color: "#b91c2b",
-            weight: 1,
-            opacity: 0.92,
-            fillColor: "#dc2626",
-            fillOpacity: 0.68,
-          });
-
-          marcador.bindTooltip(
-            `${escaparHTML(unidade.nome)}: ${formatarNumero(total)} casos`,
-            {
-              direction: "auto",
-              className: "unit-tooltip",
-              sticky: true,
-            }
-          );
-
-          marcador.bindPopup(`
+        marcador.bindPopup(`
             <strong class="popup-title">${escaparHTML(unidade.nome)}</strong>
             <div class="popup-total">
-              <strong>Total no período:</strong> ${formatarNumero(total)}<br>
+              <strong>Notificações no período:</strong> ${formatarNumero(total)}<br>
               <strong>Rede:</strong> ${unidade.sus === "S" ? "SUS" : unidade.sus === "N" ? "Privada" : "Não informada"}
             </div>
             ${criarTabelaMensal(meses)}
           `);
 
-          marcador.addTo(camadaCasos);
-          pontos.push([unidade.lat, unidade.lng]);
-        });
+        marcador.addTo(camadaCasos);
+        pontos.push([unidade.lat, unidade.lng]);
+      });
 
-        atualizarResumoMapa(
-          obterDescricaoPeriodo(anosSelecionados),
-          totalLocalizado,
-          agrupado.size
-        );
+      atualizarResumoMapa(
+        obterDescricaoPeriodo(anosSelecionados),
+        totalLocalizado,
+        agrupado.size
+      );
 
-        if (pontos.length) {
-          const limites = L.latLngBounds(pontos);
-          map.fitBounds(limites.pad(0.12), { maxZoom: 13, animate: false });
-        } else {
-          map.setView([-20.82, -49.38], 12);
-          const mensagem = dadosCSV.some((item) => item.unidadeId || item.unidadeNome)
-            ? "Nenhuma notificação com localização foi encontrada para os filtros selecionados."
-            : "O CSV não contém um identificador de unidade reconhecido. Para dimensionar os círculos como na referência, mantenha no DataDengue.csv a coluna id_unidade, CNES ou o nome do estabelecimento.";
-          document
-            .getElementById("map")
-            .insertAdjacentHTML("beforeend", `<div class="map-empty">${mensagem}</div>`);
-        }
-
-        if (registrosSemLocalizacao > 0) {
-          console.info(
-            `${registrosSemLocalizacao} notificações não puderam ser associadas a uma coordenada.`
-          );
-        }
+      if (pontos.length) {
+        const limites = L.latLngBounds(pontos);
+        map.fitBounds(limites.pad(0.12), { maxZoom: 13, animate: false });
+      } else {
+        map.setView(CONFIG.centroMapa, CONFIG.zoomInicial);
+        const mensagem = dadosCSV.some((item) => item.unidadeId || item.unidadeNome)
+          ? "Nenhuma notificação com localização foi encontrada para os filtros selecionados."
+          : "O CSV não contém um identificador de unidade reconhecido. Para dimensionar os círculos como na referência, mantenha no DataDengue_Campinas.csv a coluna id_unidade, CNES ou o nome do estabelecimento.";
+        document
+          .getElementById("map")
+          .insertAdjacentHTML("beforeend", `<div class="map-empty">${mensagem}</div>`);
       }
 
-      async function carregarBairrosOpcional() {
-        if (!ARQUIVO_BAIRROS) {
+      if (registrosSemLocalizacao > 0) {
+        console.info(
+          `${registrosSemLocalizacao} notificações não puderam ser associadas a uma coordenada.`
+        );
+      }
+    }
+
+    async function carregarBairrosOpcional() {
+      if (!ARQUIVO_BAIRROS) {
+        console.info(
+          "Camada de bairros desativada. Defina ARQUIVO_BAIRROS quando o GeoJSON estiver disponível."
+        );
+        return;
+      }
+
+      try {
+        const resposta = await fetch(ARQUIVO_BAIRROS);
+        if (!resposta.ok) {
           console.info(
-            "Camada de bairros desativada. Defina ARQUIVO_BAIRROS quando o GeoJSON estiver disponível."
+            `Camada de bairros indisponível (${resposta.status}).`
           );
           return;
         }
 
-        try {
-          const resposta = await fetch(ARQUIVO_BAIRROS);
-          if (!resposta.ok) {
-            console.info(
-              `Camada de bairros indisponível (${resposta.status}).`
-            );
-            return;
-          }
+        const geojson = await resposta.json();
 
-          const geojson = await resposta.json();
-
-          camadaBairros = L.geoJSON(geojson, {
-            style: {
-              color: "#111827",
-              weight: 0.8,
-              opacity: 0.42,
-              fillColor: "#94a3b8",
-              fillOpacity: 0.06,
-            },
-            onEachFeature(feature, layer) {
-              const nome =
-                feature?.properties?.NM_BAIRRO ||
-                feature?.properties?.nome ||
-                feature?.properties?.NOME;
-
-              if (nome) {
-                layer.bindTooltip(escaparHTML(nome), { sticky: true });
-              }
-            },
-          }).addTo(map);
-
-          camadaBairros.bringToBack();
-        } catch (erro) {
-          console.info("Não foi possível carregar a camada opcional de bairros.");
-        }
-      }
-
-      async function initMap() {
-        const mapElement = document.getElementById("map");
-
-        try {
-          mapElement.innerHTML = "";
-          map = L.map("map", { zoomControl: true }).setView(
-            [-20.82, -49.38],
-            12
-          );
-
-          L.tileLayer(
-            "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-            {
-              subdomains: "abcd",
-              maxZoom: 20,
-              attribution:
-                '&copy; OpenStreetMap contributors &copy; CARTO',
-            }
-          ).addTo(map);
-
-          camadaCasos = L.layerGroup().addTo(map);
-
-          const resposta = await fetch("unidades_sjrp_data.json");
-          if (!resposta.ok) {
-            throw new Error(`Falha ao carregar unidades (${resposta.status})`);
-          }
-
-          const data = await resposta.json();
-          prepararCatalogoUnidades(data);
-          await carregarBairrosOpcional();
-          renderizarMarcadores();
-        } catch (erro) {
-          console.error(erro);
-          mapElement.insertAdjacentHTML(
-            "beforeend",
-            '<div class="map-error">Não foi possível carregar o arquivo <strong>unidades_sjrp_data.json</strong>. Confirme se ele está na mesma pasta do HTML.</div>'
-          );
-          atualizarResumoMapa("—", 0, 0);
-        }
-      }
-
-      function obterAnosSelecionados() {
-        return Array.from(
-          document.querySelectorAll("#checkboxAnos input:checked")
-        ).map((checkbox) => checkbox.value);
-      }
-
-      function sincronizarSelectAno() {
-        const selecionados = obterAnosSelecionados();
-        const select = document.getElementById("filtroAno");
-
-        select.value = selecionados.length === 1 ? selecionados[0] : "all";
-      }
-
-      function popularFiltrosAno() {
-        const anos = [...new Set(dadosCSV.map((item) => item.ano))]
-          .sort((a, b) => Number(a) - Number(b));
-
-        const select = document.getElementById("filtroAno");
-        const container = document.getElementById("checkboxAnos");
-        const anoMaisRecente = anos.at(-1);
-
-        select.innerHTML =
-          '<option value="all">Todos os anos disponíveis</option>';
-        container.innerHTML = "";
-
-        anos.forEach((ano) => {
-          const option = document.createElement("option");
-          option.value = ano;
-          option.textContent = ano;
-          select.appendChild(option);
-
-          const label = document.createElement("label");
-          label.className = "year-chip";
-
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = ano;
-
-          // No primeiro carregamento, somente o ano mais recente fica ativo.
-          checkbox.checked = ano === anoMaisRecente;
-
-          checkbox.addEventListener("change", () => {
-            sincronizarSelectAno();
-            atualizarPainel();
-          });
-
-          const texto = document.createElement("span");
-          texto.textContent = ano;
-
-          label.append(checkbox, texto);
-          container.appendChild(label);
-        });
-
-        // Mantém o seletor superior sincronizado com o ano inicial.
-        select.value = anoMaisRecente || "all";
-      }
-
-      function atualizarIndicadores(dadosFiltrados) {
-        const total = dadosFiltrados.length;
-        const sus = dadosFiltrados.filter((item) => item.sus === "S").length;
-        const privado = dadosFiltrados.filter((item) => item.sus === "N").length;
-
-        document.getElementById("totalCasos").textContent = formatarNumero(total);
-        document.getElementById("totalSUS").textContent = formatarNumero(sus);
-        document.getElementById("totalPrivado").textContent =
-          formatarNumero(privado);
-      }
-
-      function calcularMediana(valores) {
-        if (!valores.length) return 0;
-        const ordenados = [...valores].sort((a, b) => a - b);
-        const meio = Math.floor(ordenados.length / 2);
-        return ordenados.length % 2
-          ? ordenados[meio]
-          : (ordenados[meio - 1] + ordenados[meio]) / 2;
-      }
-
-      function obterDadosFiltrados() {
-        const filtroSUS = document.getElementById("filtroSUS").value;
-        const anosSelecionados = obterAnosSelecionados();
-
-        return dadosCSV.filter(
-          (item) =>
-            (filtroSUS === "all" || item.sus === filtroSUS) &&
-            anosSelecionados.includes(item.ano)
-        );
-      }
-
-      function destruirGraficosEstatisticos() {
-        [chartAnual, chartMediaMediana, chartRede].forEach((grafico) => {
-          if (grafico) grafico.destroy();
-        });
-        chartAnual = null;
-        chartMediaMediana = null;
-        chartRede = null;
-      }
-
-      function opcoesLegenda() {
-        return {
-          position: "bottom",
-          labels: {
-            usePointStyle: true,
-            pointStyle: "circle",
-            boxWidth: 7,
-            boxHeight: 7,
-            padding: 16,
-            color: "#667085",
-            font: { size: 11, weight: "600" },
+        camadaBairros = L.geoJSON(geojson, {
+          style: {
+            color: "#111827",
+            weight: 0.8,
+            opacity: 0.42,
+            fillColor: "#94a3b8",
+            fillOpacity: 0.06,
           },
-        };
+          onEachFeature(feature, layer) {
+            const nome =
+              feature?.properties?.NM_BAIRRO ||
+              feature?.properties?.nome ||
+              feature?.properties?.NOME;
+
+            if (nome) {
+              layer.bindTooltip(escaparHTML(nome), { sticky: true });
+            }
+          },
+        }).addTo(map);
+
+        camadaBairros.bringToBack();
+      } catch (erro) {
+        console.info("Não foi possível carregar a camada opcional de bairros.");
+      }
+    }
+
+    async function initMap() {
+      const mapElement = document.getElementById("map");
+
+      try {
+        mapElement.innerHTML = "";
+        map = L.map("map", { zoomControl: true }).setView(
+          CONFIG.centroMapa,
+          CONFIG.zoomInicial
+        );
+
+        L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+          {
+            subdomains: "abcd",
+            maxZoom: 20,
+            attribution:
+              '&copy; OpenStreetMap contributors &copy; CARTO',
+          }
+        ).addTo(map);
+
+        camadaCasos = L.layerGroup().addTo(map);
+
+        await carregarBairrosOpcional();
+        renderizarMarcadores();
+      } catch (erro) {
+        console.error(erro);
+        mapElement.insertAdjacentHTML(
+          "beforeend",
+          `<div class="map-error">
+        Não foi possível inicializar o mapa.
+        Consulte o console para mais informações.
+      </div>`
+        );
+        atualizarResumoMapa("—", 0, 0);
+      }
+    }
+
+    function obterAnosSelecionados() {
+      return Array.from(
+        document.querySelectorAll("#checkboxAnos input:checked")
+      ).map((checkbox) => checkbox.value);
+    }
+
+    function sincronizarSelectAno() {
+      const selecionados = obterAnosSelecionados();
+      const select = document.getElementById("filtroAno");
+
+      select.value = selecionados.length === 1 ? selecionados[0] : "all";
+    }
+
+    function popularFiltrosAno() {
+      const anos = [...new Set(dadosCSV.map((item) => item.ano))]
+        .sort((a, b) => Number(a) - Number(b));
+
+      const select = document.getElementById("filtroAno");
+      const container = document.getElementById("checkboxAnos");
+      const anoMaisRecente = anos.at(-1);
+
+      select.innerHTML =
+        '<option value="all">Todos os anos disponíveis</option>';
+      container.innerHTML = "";
+
+      anos.forEach((ano) => {
+        const option = document.createElement("option");
+        option.value = ano;
+        option.textContent = ano;
+        select.appendChild(option);
+
+        const label = document.createElement("label");
+        label.className = "year-chip";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = ano;
+
+        // No primeiro carregamento, somente o ano mais recente fica ativo.
+        checkbox.checked = ano === anoMaisRecente;
+
+        checkbox.addEventListener("change", () => {
+          sincronizarSelectAno();
+          atualizarPainel();
+        });
+
+        const texto = document.createElement("span");
+        texto.textContent = ano;
+
+        label.append(checkbox, texto);
+        container.appendChild(label);
+      });
+
+      // Mantém o seletor superior sincronizado com o ano inicial.
+      select.value = anoMaisRecente || "all";
+    }
+
+    function atualizarIndicadores(dadosFiltrados) {
+      const somarNotificacoes = (dados) =>
+        dados.reduce(
+          (soma, item) => soma + Number(item.notificacoes || 0),
+          0
+        );
+
+      const total = somarNotificacoes(dadosFiltrados);
+      const sus = somarNotificacoes(
+        dadosFiltrados.filter((item) => item.sus === "S")
+      );
+      const privado = somarNotificacoes(
+        dadosFiltrados.filter((item) => item.sus === "N")
+      );
+
+      document.getElementById("totalCasos").textContent =
+        formatarNumero(total);
+      document.getElementById("totalSUS").textContent =
+        formatarNumero(sus);
+      document.getElementById("totalPrivado").textContent =
+        formatarNumero(privado);
+    }
+
+    function calcularMediana(valores) {
+      if (!valores.length) return 0;
+      const ordenados = [...valores].sort((a, b) => a - b);
+      const meio = Math.floor(ordenados.length / 2);
+      return ordenados.length % 2
+        ? ordenados[meio]
+        : (ordenados[meio - 1] + ordenados[meio]) / 2;
+    }
+
+    function obterDadosFiltrados() {
+      const filtroSUS = document.getElementById("filtroSUS").value;
+      const anosSelecionados = obterAnosSelecionados();
+
+      return dadosCSV.filter(
+        (item) =>
+          (filtroSUS === "all" || item.sus === filtroSUS) &&
+          anosSelecionados.includes(item.ano)
+      );
+    }
+
+    function destruirGraficosEstatisticos() {
+      [chartAnual, chartMediaMediana, chartRede].forEach((grafico) => {
+        if (grafico) grafico.destroy();
+      });
+      chartAnual = null;
+      chartMediaMediana = null;
+      chartRede = null;
+    }
+
+    function opcoesLegenda() {
+      return {
+        position: "bottom",
+        labels: {
+          usePointStyle: true,
+          pointStyle: "circle",
+          boxWidth: 7,
+          boxHeight: 7,
+          padding: 16,
+          color: "#667085",
+          font: { size: 11, weight: "600" },
+        },
+      };
+    }
+
+    function atualizarGraficosEstatisticos() {
+      destruirGraficosEstatisticos();
+
+      const anosSelecionados = obterAnosSelecionados().sort();
+      const dadosFiltrados = obterDadosFiltrados();
+
+      if (!anosSelecionados.length) return;
+
+      const totaisAnuais = Object.fromEntries(
+        anosSelecionados.map((ano) => [ano, 0])
+      );
+      const matrizMensal = Object.fromEntries(
+        anosSelecionados.map((ano) => [ano, Array(12).fill(0)])
+      );
+
+      dadosFiltrados.forEach((item) => {
+        if (totaisAnuais[item.ano] !== undefined) {
+          totaisAnuais[item.ano] += item.notificacoes;
+        }
+        const indiceMes = Number.parseInt(item.mes, 10) - 1;
+        if (
+          matrizMensal[item.ano] &&
+          indiceMes >= 0 &&
+          indiceMes < 12
+        ) {
+          matrizMensal[item.ano][indiceMes] += item.notificacoes;
+        }
+      });
+
+      const totais = anosSelecionados.map((ano) => totaisAnuais[ano]);
+      const variacoes = totais.map((total, indice) => {
+        if (indice === 0 || totais[indice - 1] === 0) return null;
+        return Number(
+          (((total - totais[indice - 1]) / totais[indice - 1]) * 100).toFixed(1)
+        );
+      });
+
+      chartAnual = new Chart(document.getElementById("graficoAnual"), {
+        data: {
+          labels: anosSelecionados,
+          datasets: [
+            {
+              type: "bar",
+              label: "Notificações",
+              data: totais,
+              backgroundColor: "rgba(36, 87, 214, 0.76)",
+              borderColor: "#2457d6",
+              borderWidth: 1,
+              borderRadius: 7,
+              maxBarThickness: 54,
+              yAxisID: "y",
+            },
+            {
+              type: "line",
+              label: "Variação anual",
+              data: variacoes,
+              borderColor: "#d94b58",
+              backgroundColor: "#d94b58",
+              borderWidth: 2.2,
+              pointRadius: 3.4,
+              pointHoverRadius: 6,
+              tension: 0.28,
+              spanGaps: true,
+              yAxisID: "yPercentual",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: opcoesLegenda(),
+            tooltip: {
+              backgroundColor: "rgba(9, 25, 61, 0.94)",
+              padding: 12,
+              callbacks: {
+                label(contexto) {
+                  if (contexto.dataset.yAxisID === "yPercentual") {
+                    const valor = contexto.parsed.y;
+                    return valor === null
+                      ? " Sem comparação anterior"
+                      : ` Variação: ${valor.toLocaleString("pt-BR")} %`;
+                  }
+                  return ` Notificações: ${formatarNumero(contexto.parsed.y)}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#667085", font: { size: 11, weight: "600" } },
+            },
+            y: {
+              beginAtZero: true,
+              border: { display: false },
+              grid: { color: "rgba(148, 163, 184, 0.18)" },
+              ticks: {
+                color: "#667085",
+                callback(valor) { return formatarNumero(valor); },
+              },
+              title: {
+                display: true,
+                text: "Notificações",
+                color: "#667085",
+                font: { size: 11, weight: "700" },
+              },
+            },
+            yPercentual: {
+              display: anosSelecionados.length > 1,
+              position: "right",
+              grid: { drawOnChartArea: false },
+              border: { display: false },
+              ticks: {
+                color: "#a13a45",
+                callback(valor) { return `${valor}%`; },
+              },
+              title: {
+                display: anosSelecionados.length > 1,
+                text: "Variação (%)",
+                color: "#a13a45",
+                font: { size: 11, weight: "700" },
+              },
+            },
+          },
+        },
+      });
+
+      const medias = [];
+      const medianas = [];
+
+      for (let mes = 0; mes < 12; mes += 1) {
+        const valores = anosSelecionados.map((ano) => matrizMensal[ano][mes]);
+        const media = valores.reduce((soma, valor) => soma + valor, 0) / valores.length;
+        medias.push(Number(media.toFixed(1)));
+        medianas.push(Number(calcularMediana(valores).toFixed(1)));
       }
 
-      function atualizarGraficosEstatisticos() {
-        destruirGraficosEstatisticos();
-
-        const anosSelecionados = obterAnosSelecionados().sort();
-        const dadosFiltrados = obterDadosFiltrados();
-
-        if (!anosSelecionados.length) return;
-
-        const totaisAnuais = Object.fromEntries(
-          anosSelecionados.map((ano) => [ano, 0])
-        );
-        const matrizMensal = Object.fromEntries(
-          anosSelecionados.map((ano) => [ano, Array(12).fill(0)])
-        );
-
-        dadosFiltrados.forEach((item) => {
-          if (totaisAnuais[item.ano] !== undefined) {
-            totaisAnuais[item.ano] += 1;
-          }
-          const indiceMes = Number.parseInt(item.mes, 10) - 1;
-          if (
-            matrizMensal[item.ano] &&
-            indiceMes >= 0 &&
-            indiceMes < 12
-          ) {
-            matrizMensal[item.ano][indiceMes] += 1;
-          }
-        });
-
-        const totais = anosSelecionados.map((ano) => totaisAnuais[ano]);
-        const variacoes = totais.map((total, indice) => {
-          if (indice === 0 || totais[indice - 1] === 0) return null;
-          return Number(
-            (((total - totais[indice - 1]) / totais[indice - 1]) * 100).toFixed(1)
-          );
-        });
-
-        chartAnual = new Chart(document.getElementById("graficoAnual"), {
+      chartMediaMediana = new Chart(
+        document.getElementById("graficoMediaMediana"),
+        {
           data: {
-            labels: anosSelecionados,
+            labels: MESES_LABEL,
             datasets: [
               {
                 type: "bar",
-                label: "Notificações",
-                data: totais,
-                backgroundColor: "rgba(36, 87, 214, 0.76)",
-                borderColor: "#2457d6",
+                label: "Média mensal",
+                data: medias,
+                backgroundColor: "rgba(15, 143, 131, 0.68)",
+                borderColor: "#0f8f83",
                 borderWidth: 1,
-                borderRadius: 7,
-                maxBarThickness: 54,
-                yAxisID: "y",
+                borderRadius: 5,
               },
               {
                 type: "line",
-                label: "Variação anual",
-                data: variacoes,
-                borderColor: "#d94b58",
-                backgroundColor: "#d94b58",
+                label: "Mediana mensal",
+                data: medianas,
+                borderColor: "#d88a12",
+                backgroundColor: "#d88a12",
                 borderWidth: 2.2,
-                pointRadius: 3.4,
-                pointHoverRadius: 6,
-                tension: 0.28,
-                spanGaps: true,
-                yAxisID: "yPercentual",
+                pointRadius: 2.5,
+                pointHoverRadius: 5,
+                tension: 0.3,
               },
             ],
           },
@@ -1839,13 +2364,9 @@
                 padding: 12,
                 callbacks: {
                   label(contexto) {
-                    if (contexto.dataset.yAxisID === "yPercentual") {
-                      const valor = contexto.parsed.y;
-                      return valor === null
-                        ? " Sem comparação anterior"
-                        : ` Variação: ${valor.toLocaleString("pt-BR")} %`;
-                    }
-                    return ` Notificações: ${formatarNumero(contexto.parsed.y)}`;
+                    return ` ${contexto.dataset.label}: ${Number(
+                      contexto.parsed.y
+                    ).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`;
                   },
                 },
               },
@@ -1853,7 +2374,7 @@
             scales: {
               x: {
                 grid: { display: false },
-                ticks: { color: "#667085", font: { size: 11, weight: "600" } },
+                ticks: { color: "#667085", font: { size: 10, weight: "600" } },
               },
               y: {
                 beginAtZero: true,
@@ -1863,359 +2384,324 @@
                   color: "#667085",
                   callback(valor) { return formatarNumero(valor); },
                 },
-                title: {
-                  display: true,
-                  text: "Notificações",
-                  color: "#667085",
-                  font: { size: 11, weight: "700" },
-                },
-              },
-              yPercentual: {
-                display: anosSelecionados.length > 1,
-                position: "right",
-                grid: { drawOnChartArea: false },
-                border: { display: false },
-                ticks: {
-                  color: "#a13a45",
-                  callback(valor) { return `${valor}%`; },
-                },
-                title: {
-                  display: anosSelecionados.length > 1,
-                  text: "Variação (%)",
-                  color: "#a13a45",
-                  font: { size: 11, weight: "700" },
-                },
               },
             },
           },
-        });
-
-        const medias = [];
-        const medianas = [];
-
-        for (let mes = 0; mes < 12; mes += 1) {
-          const valores = anosSelecionados.map((ano) => matrizMensal[ano][mes]);
-          const media = valores.reduce((soma, valor) => soma + valor, 0) / valores.length;
-          medias.push(Number(media.toFixed(1)));
-          medianas.push(Number(calcularMediana(valores).toFixed(1)));
         }
+      );
 
-        chartMediaMediana = new Chart(
-          document.getElementById("graficoMediaMediana"),
-          {
-            data: {
-              labels: MESES_LABEL,
-              datasets: [
-                {
-                  type: "bar",
-                  label: "Média mensal",
-                  data: medias,
-                  backgroundColor: "rgba(15, 143, 131, 0.68)",
-                  borderColor: "#0f8f83",
-                  borderWidth: 1,
-                  borderRadius: 5,
-                },
-                {
-                  type: "line",
-                  label: "Mediana mensal",
-                  data: medianas,
-                  borderColor: "#d88a12",
-                  backgroundColor: "#d88a12",
-                  borderWidth: 2.2,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
-                  tension: 0.3,
-                },
-              ],
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: { mode: "index", intersect: false },
-              plugins: {
-                legend: opcoesLegenda(),
-                tooltip: {
-                  backgroundColor: "rgba(9, 25, 61, 0.94)",
-                  padding: 12,
-                  callbacks: {
-                    label(contexto) {
-                      return ` ${contexto.dataset.label}: ${Number(
-                        contexto.parsed.y
-                      ).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`;
-                    },
-                  },
-                },
-              },
-              scales: {
-                x: {
-                  grid: { display: false },
-                  ticks: { color: "#667085", font: { size: 10, weight: "600" } },
-                },
-                y: {
-                  beginAtZero: true,
-                  border: { display: false },
-                  grid: { color: "rgba(148, 163, 184, 0.18)" },
-                  ticks: {
-                    color: "#667085",
-                    callback(valor) { return formatarNumero(valor); },
-                  },
-                },
-              },
-            },
-          }
+      const totalSUS = dadosFiltrados
+        .filter((item) => item.sus === "S")
+        .reduce(
+          (soma, item) => soma + Number(item.notificacoes || 0),
+          0
         );
 
-        const totalSUS = dadosFiltrados.filter((item) => item.sus === "S").length;
-        const totalPrivado = dadosFiltrados.filter((item) => item.sus === "N").length;
+      const totalPrivado = dadosFiltrados
+        .filter((item) => item.sus === "N")
+        .reduce(
+          (soma, item) => soma + Number(item.notificacoes || 0),
+          0
+        );
 
-        chartRede = new Chart(document.getElementById("graficoRede"), {
-          type: "doughnut",
-          data: {
-            labels: ["SUS", "Rede privada"],
-            datasets: [
-              {
-                data: [totalSUS, totalPrivado],
-                backgroundColor: ["#2457d6", "#d94b58"],
-                borderColor: "#ffffff",
-                borderWidth: 4,
-                hoverOffset: 7,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "64%",
-            plugins: {
-              legend: opcoesLegenda(),
-              tooltip: {
-                backgroundColor: "rgba(9, 25, 61, 0.94)",
-                padding: 12,
-                callbacks: {
-                  label(contexto) {
-                    const total = totalSUS + totalPrivado;
-                    const percentual = total
-                      ? ((contexto.parsed / total) * 100).toFixed(1)
-                      : "0,0";
-                    return ` ${contexto.label}: ${formatarNumero(
-                      contexto.parsed
-                    )} (${String(percentual).replace(".", ",")}%)`;
-                  },
+      chartRede = new Chart(document.getElementById("graficoRede"), {
+        type: "doughnut",
+        data: {
+          labels: ["SUS", "Rede privada"],
+          datasets: [
+            {
+              data: [totalSUS, totalPrivado],
+              backgroundColor: ["#2457d6", "#d94b58"],
+              borderColor: "#ffffff",
+              borderWidth: 4,
+              hoverOffset: 7,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "64%",
+          plugins: {
+            legend: opcoesLegenda(),
+            tooltip: {
+              backgroundColor: "rgba(9, 25, 61, 0.94)",
+              padding: 12,
+              callbacks: {
+                label(contexto) {
+                  const total = totalSUS + totalPrivado;
+                  const percentual = total
+                    ? ((contexto.parsed / total) * 100).toFixed(1)
+                    : "0,0";
+                  return ` ${contexto.label}: ${formatarNumero(
+                    contexto.parsed
+                  )} (${String(percentual).replace(".", ",")}%)`;
                 },
               },
             },
           },
-        });
+        },
+      });
+    }
+
+    function atualizarGrafico() {
+      const anosSelecionados = obterAnosSelecionados();
+      const canvas = document.getElementById("graficoTemporal");
+      const vazio = document.getElementById("chartEmpty");
+      const dadosFiltrados = obterDadosFiltrados();
+
+      atualizarIndicadores(dadosFiltrados);
+
+      if (chart) {
+        chart.destroy();
+        chart = null;
       }
 
-      function atualizarGrafico() {
-        const anosSelecionados = obterAnosSelecionados();
-        const canvas = document.getElementById("graficoTemporal");
-        const vazio = document.getElementById("chartEmpty");
-        const dadosFiltrados = obterDadosFiltrados();
+      if (anosSelecionados.length === 0) {
+        canvas.style.display = "none";
+        vazio.style.display = "grid";
+        return;
+      }
 
-        atualizarIndicadores(dadosFiltrados);
+      canvas.style.display = "block";
+      vazio.style.display = "none";
 
-        if (chart) {
-          chart.destroy();
-          chart = null;
+      const dadosPorAno = Object.fromEntries(
+        anosSelecionados.map((ano) => [ano, Array(12).fill(0)])
+      );
+
+      dadosFiltrados.forEach((item) => {
+        const indiceMes = Number.parseInt(item.mes, 10) - 1;
+        if (indiceMes >= 0 && indiceMes < 12 && dadosPorAno[item.ano]) {
+          dadosPorAno[item.ano][indiceMes] += item.notificacoes;
         }
+      });
 
-        if (anosSelecionados.length === 0) {
-          canvas.style.display = "none";
-          vazio.style.display = "grid";
-          return;
-        }
+      const datasets = anosSelecionados.map((ano, indice) => ({
+        label: ano,
+        data: dadosPorAno[ano],
+        borderColor: CORES_ANOS[indice % CORES_ANOS.length],
+        backgroundColor: `${CORES_ANOS[indice % CORES_ANOS.length]}1f`,
+        borderWidth: 2.5,
+        tension: 0.34,
+        fill: false,
+        pointRadius: 2.8,
+        pointHoverRadius: 6,
+        pointBorderWidth: 0,
+      }));
 
-        canvas.style.display = "block";
-        vazio.style.display = "none";
-
-        const dadosPorAno = Object.fromEntries(
-          anosSelecionados.map((ano) => [ano, Array(12).fill(0)])
-        );
-
-        dadosFiltrados.forEach((item) => {
-          const indiceMes = Number.parseInt(item.mes, 10) - 1;
-          if (indiceMes >= 0 && indiceMes < 12 && dadosPorAno[item.ano]) {
-            dadosPorAno[item.ano][indiceMes] += 1;
-          }
-        });
-
-        const datasets = anosSelecionados.map((ano, indice) => ({
-          label: ano,
-          data: dadosPorAno[ano],
-          borderColor: CORES_ANOS[indice % CORES_ANOS.length],
-          backgroundColor: `${CORES_ANOS[indice % CORES_ANOS.length]}1f`,
-          borderWidth: 2.5,
-          tension: 0.34,
-          fill: false,
-          pointRadius: 2.8,
-          pointHoverRadius: 6,
-          pointBorderWidth: 0,
-        }));
-
-        chart = new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: MESES_LABEL,
-            datasets,
+      chart = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: MESES_LABEL,
+          datasets,
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false,
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-              mode: "index",
-              intersect: false,
+          layout: {
+            padding: {
+              top: 4,
+              right: 8,
+              bottom: 0,
+              left: 2,
             },
-            layout: {
-              padding: {
-                top: 4,
-                right: 8,
-                bottom: 0,
-                left: 2,
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+              labels: {
+                usePointStyle: true,
+                pointStyle: "circle",
+                boxWidth: 7,
+                boxHeight: 7,
+                padding: 18,
+                color: "#667085",
+                font: {
+                  size: 11,
+                  weight: "600",
+                },
               },
             },
-            plugins: {
-              legend: {
+            tooltip: {
+              backgroundColor: "rgba(9, 25, 61, 0.94)",
+              padding: 12,
+              titleFont: { weight: "700" },
+              callbacks: {
+                label(contexto) {
+                  return ` ${contexto.dataset.label}: ${formatarNumero(
+                    contexto.parsed.y
+                  )} notificações`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+              ticks: {
+                color: "#667085",
+                font: { size: 11, weight: "600" },
+              },
+            },
+            y: {
+              beginAtZero: true,
+              border: {
+                display: false,
+              },
+              grid: {
+                color: "rgba(148, 163, 184, 0.18)",
+              },
+              ticks: {
+                color: "#667085",
+                padding: 8,
+                callback(valor) {
+                  return formatarNumero(valor);
+                },
+              },
+              title: {
                 display: true,
-                position: "bottom",
-                labels: {
-                  usePointStyle: true,
-                  pointStyle: "circle",
-                  boxWidth: 7,
-                  boxHeight: 7,
-                  padding: 18,
-                  color: "#667085",
-                  font: {
-                    size: 11,
-                    weight: "600",
-                  },
-                },
-              },
-              tooltip: {
-                backgroundColor: "rgba(9, 25, 61, 0.94)",
-                padding: 12,
-                titleFont: { weight: "700" },
-                callbacks: {
-                  label(contexto) {
-                    return ` ${contexto.dataset.label}: ${formatarNumero(
-                      contexto.parsed.y
-                    )} casos`;
-                  },
-                },
-              },
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false,
-                },
-                ticks: {
-                  color: "#667085",
-                  font: { size: 11, weight: "600" },
-                },
-              },
-              y: {
-                beginAtZero: true,
-                border: {
-                  display: false,
-                },
-                grid: {
-                  color: "rgba(148, 163, 184, 0.18)",
-                },
-                ticks: {
-                  color: "#667085",
-                  padding: 8,
-                  callback(valor) {
-                    return formatarNumero(valor);
-                  },
-                },
-                title: {
-                  display: true,
-                  text: "Número de notificações",
-                  color: "#667085",
-                  font: { size: 11, weight: "700" },
-                },
+                text: "Número de notificações",
+                color: "#667085",
+                font: { size: 11, weight: "700" },
               },
             },
           },
-        });
+        },
+      });
+    }
+
+    function atualizarPainel() {
+      atualizarGrafico();
+      atualizarGraficosEstatisticos();
+      renderizarMarcadores();
+    }
+
+    function normalizarTipoRede(valor) {
+      const rede = String(valor ?? "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+
+      if (
+        rede.includes("SUS") ||
+        rede.includes("PUBLIC")
+      ) {
+        return "S";
       }
 
-      function atualizarPainel() {
-        atualizarGrafico();
-        atualizarGraficosEstatisticos();
-        renderizarMarcadores();
+      if (rede.includes("PRIVAD")) {
+        return "N";
       }
 
-      function carregarCSV() {
-        Papa.parse("DataDengue.csv", {
-          download: true,
-          header: true,
-          skipEmptyLines: true,
-          complete(resultado) {
-            dadosCSV = resultado.data
-              .map((linha) => {
-                if (!linha.dt_notific) return null;
+      return "";
+    }
 
-                const data = String(linha.dt_notific).trim();
-                const correspondencia = data.match(/^(\d{4})-(\d{2})/);
-                if (!correspondencia) return null;
-
-                const coordenadas = obterCoordenadas(linha);
-
-                return {
-                  ano: correspondencia[1],
-                  mes: correspondencia[2],
-                  sus: normalizarSUS(linha.SUS),
-                  unidadeId: obterIdentificadorUnidade(linha),
-                  unidadeNome: obterNomeUnidade(linha),
-                  lat: coordenadas.lat,
-                  lng: coordenadas.lng,
-                };
-              })
-              .filter(Boolean);
-
-            popularFiltrosAno();
-            atualizarPainel();
-          },
-          error(erro) {
-            console.error("Erro ao carregar DataDengue.csv:", erro);
-            document.getElementById("chartEmpty").style.display = "grid";
-            document.getElementById("chartEmpty").textContent =
-              "Não foi possível carregar DataDengue.csv. Confirme se o arquivo está na mesma pasta do HTML.";
-            document.getElementById("graficoTemporal").style.display = "none";
-            atualizarIndicadores([]);
-          },
-        });
-      }
-
-      document.getElementById("filtroAno").addEventListener("change", (evento) => {
-        const valor = evento.target.value;
-        const checkboxes = document.querySelectorAll("#checkboxAnos input");
-
-        checkboxes.forEach((checkbox) => {
-          checkbox.checked = valor === "all" || checkbox.value === valor;
+    async function carregarDados() {
+      try {
+        const resposta = await fetch(CONFIG.arquivoDengue, {
+          cache: "no-cache",
         });
 
+        if (!resposta.ok) {
+          throw new Error(
+            `Falha ao carregar os dados (${resposta.status})`
+          );
+        }
+
+        const payload = await resposta.json();
+
+        metaDados = payload.meta || {};
+        dadosCSV = Array.isArray(payload.dados)
+          ? payload.dados.map((item) => ({
+              ...item,
+              ano: String(item.ano),
+              mes: String(item.mes).padStart(2, "0"),
+              sus: String(item.sus || ""),
+              unidadeId: String(item.unidadeId || ""),
+              unidadeNome: String(
+                item.unidadeNome || "Unidade sem nome informado"
+              ),
+              lat:
+                item.lat === null || item.lat === ""
+                  ? null
+                  : Number(item.lat),
+              lng:
+                item.lng === null || item.lng === ""
+                  ? null
+                  : Number(item.lng),
+              notificacoes: Number(item.notificacoes || 0),
+            }))
+          : [];
+
+        if (!dadosCSV.length) {
+          throw new Error("O JSON não contém registros agregados.");
+        }
+
+        console.info(
+          `${dadosCSV.length.toLocaleString("pt-BR")} registros agregados carregados, ` +
+          `representando ${formatarNumero(metaDados.totalNotificacoes)} notificações.`
+        );
+
+        popularFiltrosAno();
+        atualizarCoberturaTemporal();
         atualizarPainel();
+      } catch (erro) {
+        console.error(
+          `Erro ao carregar ${CONFIG.arquivoDengue}:`,
+          erro
+        );
+
+        document.getElementById("chartEmpty").style.display = "grid";
+        document.getElementById("chartEmpty").textContent =
+          `Não foi possível carregar ${CONFIG.arquivoDengue}. ` +
+          `Confirme se o arquivo está na mesma pasta do HTML.`;
+
+        document.getElementById("graficoTemporal").style.display =
+          "none";
+
+        document.getElementById("statusCobertura").innerHTML =
+          '<span class="status-dot"></span> Base epidemiológica não carregada';
+
+        atualizarIndicadores([]);
+      }
+    }
+
+    document.getElementById("filtroAno").addEventListener("change", (evento) => {
+      const valor = evento.target.value;
+      const checkboxes = document.querySelectorAll("#checkboxAnos input");
+
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = valor === "all" || checkbox.value === valor;
       });
 
-      document.getElementById("filtroSUS").addEventListener("change", atualizarPainel);
+      atualizarPainel();
+    });
 
-      document.getElementById("resetFiltros").addEventListener("click", () => {
-        document.getElementById("filtroAno").value = "all";
-        document.getElementById("filtroSUS").value = "all";
-        document.querySelectorAll("#checkboxAnos input").forEach((checkbox) => {
-          checkbox.checked = true;
-        });
-        atualizarPainel();
-      });
+    document.getElementById("filtroSUS").addEventListener("change", atualizarPainel);
 
-      window.addEventListener("load", () => {
-        initMap();
-        carregarCSV();
+    document.getElementById("resetFiltros").addEventListener("click", () => {
+      document.getElementById("filtroAno").value = "all";
+      document.getElementById("filtroSUS").value = "all";
+      document.querySelectorAll("#checkboxAnos input").forEach((checkbox) => {
+        checkbox.checked = true;
       });
-    </script>
-  </body>
+      atualizarPainel();
+    });
+
+    window.addEventListener("load", () => {
+      initMap();
+      carregarDados();
+    });
+  </script>
+</body>
+
 </html>
