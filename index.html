@@ -551,6 +551,24 @@
       height: 285px;
     }
 
+    .stat-chart-wrap.ranking {
+      height: 420px;
+    }
+
+    .ranking-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .ranking-summary strong {
+      color: #344054;
+    }
+
     .stat-note {
       margin: 13px 0 0;
       color: var(--muted);
@@ -1065,6 +1083,10 @@
         height: 350px;
       }
 
+      .stat-chart-wrap.ranking {
+        height: 500px;
+      }
+
       .map-summary {
         grid-template-columns: 1fr;
       }
@@ -1304,6 +1326,45 @@
           <div class="stat-chart-wrap">
             <canvas id="graficoAnual"></canvas>
           </div>
+        </article>
+
+        <article class="panel stat-card stat-card-wide">
+          <div class="stat-card-header">
+            <div>
+              <h3 class="stat-card-title">
+                Ranking das 10 unidades com mais notificações
+              </h3>
+              <p class="stat-card-description">
+                O ranking soma as notificações por estabelecimento e acompanha
+                automaticamente os filtros de período e rede.
+              </p>
+            </div>
+            <span class="stat-badge">Top 10</span>
+          </div>
+
+          <div class="stat-chart-wrap ranking">
+            <canvas id="graficoRankingUnidades"></canvas>
+          </div>
+
+          <div class="ranking-summary">
+            <span>
+              <strong>Período:</strong>
+              <span id="rankingPeriodo">—</span>
+            </span>
+            <span>
+              <strong>Rede:</strong>
+              <span id="rankingRede">—</span>
+            </span>
+            <span>
+              <strong>Participação do Top 10:</strong>
+              <span id="rankingParticipacao">—</span>
+            </span>
+          </div>
+
+          <p class="stat-note">
+            O ranking considera o estabelecimento associado à notificação
+            e não representa o local provável de transmissão.
+          </p>
         </article>
 
         <article class="panel stat-card">
@@ -1589,6 +1650,7 @@
     let chartAnual = null;
     let chartMediaMediana = null;
     let chartRede = null;
+    let chartRankingUnidades = null;
     let map = null;
     let camadaCasos = null;
     let camadaBairros = null;
@@ -2163,12 +2225,26 @@
     }
 
     function destruirGraficosEstatisticos() {
-      [chartAnual, chartMediaMediana, chartRede].forEach((grafico) => {
-        if (grafico) grafico.destroy();
-      });
+      [chartAnual, chartMediaMediana, chartRede, chartRankingUnidades]
+        .forEach((grafico) => {
+          if (grafico) grafico.destroy();
+        });
+
       chartAnual = null;
       chartMediaMediana = null;
       chartRede = null;
+      chartRankingUnidades = null;
+    }
+
+    function abreviarNomeUnidade(nome, limite = 42) {
+      const texto = String(nome || "Unidade sem nome informado").trim();
+      return texto.length > limite ? `${texto.slice(0, limite - 1)}…` : texto;
+    }
+
+    function obterDescricaoRede(valor) {
+      if (valor === "S") return "Somente SUS";
+      if (valor === "N") return "Somente rede privada";
+      return "SUS + rede privada";
     }
 
     function opcoesLegenda() {
@@ -2442,6 +2518,142 @@
           },
         },
       });
+      const unidadesAgrupadas = new Map();
+
+      dadosFiltrados.forEach((item) => {
+        const chave =
+          variantesIdentificador(item.unidadeId)[0] ||
+          normalizarNome(item.unidadeNome) ||
+          "UNIDADE_NAO_INFORMADA";
+
+        if (!unidadesAgrupadas.has(chave)) {
+          unidadesAgrupadas.set(chave, {
+            nome: item.unidadeNome || "Unidade sem nome informado",
+            total: 0,
+          });
+        }
+
+        unidadesAgrupadas.get(chave).total += Number(item.notificacoes || 0);
+      });
+
+      const rankingCompleto = Array.from(unidadesAgrupadas.values())
+        .sort((a, b) => b.total - a.total);
+
+      const top10 = rankingCompleto.slice(0, 10);
+
+      const totalFiltrado = dadosFiltrados.reduce(
+        (soma, item) => soma + Number(item.notificacoes || 0),
+        0
+      );
+
+      const totalTop10 = top10.reduce(
+        (soma, item) => soma + item.total,
+        0
+      );
+
+      const percentualTop10 = totalFiltrado
+        ? (totalTop10 / totalFiltrado) * 100
+        : 0;
+
+      document.getElementById("rankingPeriodo").textContent =
+        obterDescricaoPeriodo(anosSelecionados);
+
+      document.getElementById("rankingRede").textContent =
+        obterDescricaoRede(document.getElementById("filtroSUS").value);
+
+      document.getElementById("rankingParticipacao").textContent =
+        `${percentualTop10.toLocaleString("pt-BR", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}%`;
+
+      const nomesCompletos = top10.map((item) => item.nome);
+
+      chartRankingUnidades = new Chart(
+        document.getElementById("graficoRankingUnidades"),
+        {
+          type: "bar",
+          data: {
+            labels: top10.map(
+              (item, indice) =>
+                `${indice + 1}º ${abreviarNomeUnidade(item.nome)}`
+            ),
+            datasets: [{
+              label: "Notificações",
+              data: top10.map((item) => item.total),
+              backgroundColor: "rgba(36, 87, 214, 0.76)",
+              borderColor: "#2457d6",
+              borderWidth: 1,
+              borderRadius: 7,
+              barPercentage: 0.72,
+              categoryPercentage: 0.82,
+            }],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "rgba(9, 25, 61, 0.94)",
+                padding: 12,
+                callbacks: {
+                  title(contextos) {
+                    return nomesCompletos[contextos[0]?.dataIndex ?? 0];
+                  },
+                  label(contexto) {
+                    const valor = Number(contexto.parsed.x || 0);
+                    const percentual = totalFiltrado
+                      ? (valor / totalFiltrado) * 100
+                      : 0;
+
+                    return [
+                      ` Notificações: ${formatarNumero(valor)}`,
+                      ` Participação no total: ${percentual.toLocaleString(
+                        "pt-BR",
+                        {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        }
+                      )}%`,
+                    ];
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: {
+                  color: "#475467",
+                  font: { size: 11, weight: "650" },
+                  autoSkip: false,
+                },
+              },
+              x: {
+                beginAtZero: true,
+                border: { display: false },
+                grid: { color: "rgba(148, 163, 184, 0.18)" },
+                ticks: {
+                  color: "#667085",
+                  callback(valor) {
+                    return formatarNumero(valor);
+                  },
+                },
+                title: {
+                  display: true,
+                  text: "Número de notificações",
+                  color: "#667085",
+                  font: { size: 11, weight: "700" },
+                },
+              },
+            },
+          },
+        }
+      );
+
     }
 
     function atualizarGrafico() {
