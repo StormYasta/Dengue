@@ -44,6 +44,10 @@ Projeto inspirador:
 
 - [Mas-Rodrigues — Monitor da Dengue](https://github.com/Mas-Rodrigues/Monitor-da-Dengue)
 
+Notebook utilizado:
+
+- https://colab.research.google.com/drive/1yOblVeZjGJ2cLUxDrQKBd9vRJWx2JwAv?usp=sharing
+
 ---
 
 ## Tecnologias utilizadas
